@@ -831,6 +831,13 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<!-- Google Identity Services: used ONLY to obtain the Calendar-scoped
+     OAuth access token (see getAccessToken() below). Firebase's
+     signInWithPopup() is kept for identity/Firestore sign-in, but it is
+     not a reliable source of a Calendar access token in modern browsers
+     (see the long comment above getAccessToken()), so token acquisition
+     is handled by this library instead. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -1380,38 +1387,124 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   // via the prefilled create link, so that's the calendar we read back from.
   const CALENDAR_ID = "primary";
 
+  // ---- OAuth Web client ID for Google Identity Services (see
+  // getAccessToken() below). This is DIFFERENT from firebaseConfig.apiKey
+  // above — it's the "Web client (auto created by Google Service)" OAuth
+  // 2.0 Client ID that Firebase generated for this project when Google
+  // sign-in was first enabled. Find it at:
+  //   Google Cloud Console → APIs & Services → Credentials
+  //   (project: candidate-journey-87eb9) → OAuth 2.0 Client IDs
+  // It's safe to keep in client-side code (same as any OAuth client ID
+  // used for browser apps) — paste it in below to finish wiring Calendar
+  // sync. Until it's filled in, Calendar sync fails loudly in the console
+  // instead of silently, which is easier to diagnose than a missing token.
+  const GOOGLE_OAUTH_CLIENT_ID = "575908823529-mevfvu1n993hpedb34itj0t0mj0pegss.apps.googleusercontent.com";
+
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   const auth = firebase.auth();
 
-  // ---- Google sign-in (Recruiter View only — Candidate View never
-  // authenticates; it only ever reads from Firestore, which is what makes
-  // it work from any device without HR's Google account). One sign-in
-  // does two jobs at once: it's HR's identity for Firestore's security
-  // rules (so only a signed-in recruiter can write a synced meeting), and
-  // it hands back a Calendar-scoped access token for the read-back below.
+  // ---- Calendar OAuth access token ----------------------------------
+  // Why this no longer comes from Firebase's signInWithPopup():
+  //
+  // The old implementation asked firebase.auth.GoogleAuthProvider for the
+  // "calendar.readonly" scope and then pulled the OAuth access token off
+  // the sign-in result via credentialFromResult(). That is Firebase's
+  // documented pattern, but in current Chrome/Edge it is unreliable for
+  // two independent reasons, which is exactly the pair of symptoms this
+  // app was hitting:
+  //   1. Firebase's popup flow hands the OAuth token back through a
+  //      relay page on the Firebase authDomain. With third-party storage
+  //      partitioning (and Cross-Origin-Opener-Policy isolating the
+  //      popup's browsing context from this tab), that relay can fail
+  //      silently — the popup still completes and Firebase still signs
+  //      the user in (hence "Google sign-in succeeded"), but the
+  //      Calendar-scoped access token never makes it back, so
+  //      credentialFromResult() returns a credential with no accessToken.
+  //   2. The same isolation is what breaks Firebase's internal
+  //      `popupWin.closed` polling, producing the
+  //      "Cross-Origin-Opener-Policy policy would block the window.closed
+  //      call" console warning.
+  //
+  // Google Identity Services' token client (loaded via the
+  // accounts.google.com/gsi/client script tag in <head>) is Google's
+  // current, purpose-built replacement for exactly this: it opens its own
+  // consent popup, does not poll window.closed, and hands the access
+  // token straight to a callback instead of relying on a cross-window
+  // relay. Firebase sign-in is kept below (ensureFirebaseSignIn) purely
+  // for Firestore's security rules, which need to know *who* is writing;
+  // it no longer has anything to do with getting the Calendar token.
   let gAccessToken = null;
+  let gTokenExpiresAt = 0; // ms since epoch; refresh once we're past this
+  let gTokenClient = null;
   let gSignInPromise = null;
 
+  // Firebase identity sign-in only — no Calendar scope requested here, so
+  // there's nothing for it to hand back except who the recruiter is.
+  function ensureFirebaseSignIn(){
+    if (auth.currentUser) return Promise.resolve(auth.currentUser);
+    return auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+      .then(result => result.user)
+      .catch(err => {
+        console.warn('Google sign-in failed:', err && (err.code || err.message) || err);
+        return null;
+      });
+  }
+
+  function getTokenClient(){
+    if (gTokenClient) return gTokenClient;
+    if (!window.google || !google.accounts || !google.accounts.oauth2){
+      console.warn('Google Identity Services has not loaded yet (accounts.google.com/gsi/client) — Calendar sync can\'t request a token.');
+      return null;
+    }
+    if (!GOOGLE_OAUTH_CLIENT_ID || GOOGLE_OAUTH_CLIENT_ID.indexOf('REPLACE_WITH') !== -1){
+      console.warn('GOOGLE_OAUTH_CLIENT_ID is still a placeholder — set it to this project\'s OAuth Web client ID to enable Calendar sync.');
+      return null;
+    }
+    gTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_OAUTH_CLIENT_ID,
+      scope: CALENDAR_SCOPE,
+      callback: () => {}, // replaced per-request in getAccessToken()
+    });
+    return gTokenClient;
+  }
+
   // forceConsent=true bypasses the cached token and re-prompts Google for
-  // permission. Needed the first time a recruiter grants Calendar access
-  // (if their Firebase session already existed from a plain sign-in without
-  // this scope, Google can silently skip the consent screen and hand back
-  // a token that can't read Calendar), and again whenever a cached token
-  // has expired (Google access tokens are short-lived, ~1 hour).
+  // permission. Needed the first time a recruiter grants Calendar access,
+  // and again whenever a cached token has expired or is rejected by the
+  // API (Google access tokens are short-lived, ~1 hour).
   function getAccessToken(forceConsent){
-    if (gAccessToken && !forceConsent) return Promise.resolve(gAccessToken);
+    if (gAccessToken && !forceConsent && Date.now() < gTokenExpiresAt) return Promise.resolve(gAccessToken);
     if (gSignInPromise) return gSignInPromise;
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope(CALENDAR_SCOPE);
-    provider.setCustomParameters({ prompt: 'consent' });
-    gSignInPromise = auth.signInWithPopup(provider).then(result => {
-      const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
-      gAccessToken = (credential && credential.accessToken) || null;
-      if (!gAccessToken) console.warn('Google sign-in succeeded but no Calendar access token was returned.');
-      return gAccessToken;
-    }).catch(err => { console.warn('Google sign-in failed:', err && (err.code || err.message) || err); return null; })
-      .finally(() => { gSignInPromise = null; });
+    const client = getTokenClient();
+    if (!client) return Promise.resolve(null);
+    gSignInPromise = ensureFirebaseSignIn().then(() => new Promise(resolve => {
+      client.callback = (resp) => {
+        if (resp && resp.access_token){
+          gAccessToken = resp.access_token;
+          // expires_in is seconds; refresh a little early to be safe.
+          gTokenExpiresAt = Date.now() + (((resp.expires_in || 3300) - 60) * 1000);
+          resolve(gAccessToken);
+        } else {
+          console.warn('Google sign-in succeeded but no Calendar access token was returned.', resp && resp.error);
+          gAccessToken = null;
+          gTokenExpiresAt = 0;
+          resolve(null);
+        }
+      };
+      client.error_callback = (err) => {
+        console.warn('Calendar consent popup error:', err && (err.type || err.message) || err);
+        gAccessToken = null;
+        gTokenExpiresAt = 0;
+        resolve(null);
+      };
+      try{
+        client.requestAccessToken({ prompt: forceConsent ? 'consent' : '' });
+      }catch(e){
+        console.warn('Calendar sync: could not open the Google consent popup.', e);
+        resolve(null);
+      }
+    })).finally(() => { gSignInPromise = null; });
     return gSignInPromise;
   }
 
@@ -1419,10 +1512,10 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   // starts scheduling — never later, inside the tab-focus handler that
   // fires when the recruiter comes back from Calendar. A focus/
   // visibilitychange event is not a trusted user gesture, so browsers
-  // silently block the signInWithPopup() popup if it's first triggered
-  // there. Firing getAccessToken() here, in the same call stack as the
-  // click, is what makes the consent popup (when one is needed) actually
-  // show up instead of being swallowed with no visible error.
+  // silently block the consent popup if it's first triggered there.
+  // Firing getAccessToken() here, in the same call stack as the click, is
+  // what makes the consent popup (when one is needed) actually show up
+  // instead of being swallowed with no visible error.
 
   // Finds the Calendar event HR just created, by the hidden marker we
   // embedded in its description — never by guessing from title or name.
@@ -1442,6 +1535,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
       });
       if ((res.status === 401 || res.status === 403) && retry){
         gAccessToken = null;
+        gTokenExpiresAt = 0;
         await getAccessToken(true);
         return findCalendarEventByMarker(marker, false);
       }
@@ -1465,6 +1559,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
       if (res.status === 404 || res.status === 410) return { status: 'cancelled' };
       if ((res.status === 401 || res.status === 403) && retry){
         gAccessToken = null;
+        gTokenExpiresAt = 0;
         await getAccessToken(true);
         return getCalendarEventById(eventId, false);
       }

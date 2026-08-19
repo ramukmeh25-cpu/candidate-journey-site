@@ -3225,6 +3225,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
               </a>` : ''}
             </div>
             ${!c.email ? `<div class="invite-fail-note">⚠ No email on file for ${c.name} — they may not have received this invite. Add an email, then use Change date or time to resend it.</div>` : ''}
+            ${tp._eventMissing ? `<div class="invite-fail-note">⚠ The Google Calendar event for this meeting could not be found. Please create a new meeting.</div>` : ''}
             <div class="mc-actions">
               <button class="mc-action-btn" id="change-time-btn" type="button" data-tip="Opens the real event in Google Calendar — change it there, and it syncs back here automatically.">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
@@ -3465,36 +3466,50 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   }
 
   // ---- Reschedule / cancel an already-scheduled meeting ----
-  // Both actions open the real Calendar event directly (its actual edit
-  // page, from the confirmed htmlLink we synced earlier) — HR changes or
-  // deletes it there, exactly as with the first-time create. On return we
-  // re-read that specific event by its Calendar event ID and update
-  // Firestore to match whatever Calendar now actually says, including if
-  // it was deleted.
-  function handleOpenInCalendar(c, tp){
+  // Both actions must land HR on the real, still-existing Calendar event —
+  // never on a possibly-stale tp.htmlLink and never on the generic Calendar
+  // homepage as a silent fallback. So we open a blank tab synchronously
+  // (same click, so it isn't popup-blocked), verify the stored
+  // calendarEventId with the existing getCalendarEventById() lookup, and
+  // only then navigate that tab to the event's own fresh htmlLink. If the
+  // event can't be verified, the tab is closed and a clear inline message
+  // is shown instead — the touchpoint/meeting record is left untouched.
+  async function handleOpenInCalendar(c, tp){
     const i = touchpointIndex(c, tp);
-    const url = tp.htmlLink || 'https://calendar.google.com/calendar/r';
+    const eventId = tp.calendarEventId;
+    const win = window.open('', '_blank', 'noopener');
     // Same reasoning as handleScheduleInCalendar: request the token here,
     // synchronously inside the click, not later inside the tab-focus
     // handler.
     const tokenPromise = getAccessToken();
-    window.open(url, '_blank', 'noopener');
-    toast('Make your change in Google Calendar — this page updates automatically once it\'s saved.');
     tp._checking = true;
+    tp._eventMissing = false;
     renderHero(c);
-    tokenPromise.then(token => {
-      if (!token){
-        console.warn('Calendar sync: no access token after reschedule/cancel click — the Google consent popup was likely blocked or dismissed.');
-        toast('Calendar access wasn\'t granted, so this can\'t sync automatically. Allow the Google sign-in popup and try again.');
-        tp._checking = false;
-        if (candidate(currentId)) renderHero(candidate(currentId));
-        return;
-      }
-      onReturnFromCalendar(async () => {
-        await pollForCalendarEventById(c.id, i, tp.calendarEventId);
-        tp._checking = false;
-        if (candidate(currentId)) renderHero(candidate(currentId));
-      });
+    const token = await tokenPromise;
+    if (!token){
+      console.warn('Calendar sync: no access token after reschedule/cancel click — the Google consent popup was likely blocked or dismissed.');
+      toast('Calendar access wasn\'t granted, so this can\'t sync automatically. Allow the Google sign-in popup and try again.');
+      tp._checking = false;
+      if (win) win.close();
+      if (candidate(currentId)) renderHero(candidate(currentId));
+      return;
+    }
+    const ev = eventId ? await getCalendarEventById(eventId) : null;
+    if (!ev || ev.status === 'cancelled'){
+      tp._checking = false;
+      tp._eventMissing = true;
+      if (win) win.close();
+      toast('The Google Calendar event for this meeting could not be found. Please create a new meeting.');
+      if (candidate(currentId)) renderHero(candidate(currentId));
+      return;
+    }
+    const url = ev.htmlLink || tp.htmlLink || 'https://calendar.google.com/calendar/r';
+    if (win) win.location.href = url; else window.open(url, '_blank', 'noopener');
+    toast('Make your change in Google Calendar — this page updates automatically once it\'s saved.');
+    onReturnFromCalendar(async () => {
+      await pollForCalendarEventById(c.id, i, eventId);
+      tp._checking = false;
+      if (candidate(currentId)) renderHero(candidate(currentId));
     });
   }
 

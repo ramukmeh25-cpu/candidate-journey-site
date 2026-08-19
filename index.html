@@ -917,7 +917,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     </div>
     <div class="field" style="margin-top:12px;">
       <label for="rps-email">Email</label>
-      <input type="email" id="rps-email" placeholder="you@example.com" autocomplete="email">
+      <input type="email" id="rps-email" placeholder="you@example.com" autocomplete="email" readonly style="background:var(--paper-sunk); color:var(--ink-soft); cursor:not-allowed;">
     </div>
     <div class="field" style="margin-top:12px;">
       <label for="rps-phone">Phone number</label>
@@ -931,7 +931,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16v.01"/></svg>
       <span id="recruiter-profile-setup-error-text">Please fill in your phone number and designation.</span>
     </div>
-    <button class="btn btn-primary" id="recruiter-profile-setup-save" style="width:100%; justify-content:center; margin-top:14px;">Save profile</button>
+    <button class="btn btn-primary" id="recruiter-profile-setup-save" style="width:100%; justify-content:center; margin-top:14px;">Save &amp; Continue</button>
     <div class="portal-login-foot">You can update these details later if anything changes.</div>
   </div>
 </div>
@@ -4605,7 +4605,6 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     const errText = document.getElementById('recruiter-profile-setup-error-text');
     errEl.classList.remove('show');
     const name = document.getElementById('rps-name').value.trim();
-    const email = document.getElementById('rps-email').value.trim();
     const phone = document.getElementById('rps-phone').value.trim();
     const designation = document.getElementById('rps-designation').value.trim();
     if (!phone || !designation){
@@ -4615,7 +4614,9 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     }
     const user = profileSetupUser;
     if (!user) return; // shouldn't happen; screen is only opened with a user
-    saveRecruiterProfile(user.uid, { name: name || user.displayName || null, email: email || user.email || null, phone, designation });
+    // Email always comes from the authenticated Google account (the field
+    // is read-only on this screen) — never taken from user-editable input.
+    saveRecruiterProfile(user.uid, { name: name || user.displayName || null, email: user.email || null, phone, designation });
     profileSetupScreen.classList.remove('open');
     profileSetupUser = null;
     await enterRecruiterDashboard(user);

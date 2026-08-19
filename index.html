@@ -4548,6 +4548,20 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     if (!user){
       errText.textContent = 'Sign-in failed or was cancelled. Please try again.';
       errEl.classList.add('show');
+      return;
+    }
+    // STEP 9A BUG FIX: don't just wait for auth.onAuthStateChanged to pick
+    // this sign-in up — route through the exact same profile-setup gate
+    // right here, deterministically, for the sign-in this click just
+    // produced. (The onAuthStateChanged listener in init() still runs too,
+    // for page-refresh/already-signed-in cases — both paths call the same
+    // loadRecruiterProfile()/showRecruiterProfileSetup()/
+    // enterRecruiterDashboard() functions, so re-running this is harmless.)
+    document.getElementById('recruiter-login-screen').classList.remove('open');
+    if (loadRecruiterProfile(user.uid)){
+      await enterRecruiterDashboard(user);
+    } else {
+      showRecruiterProfileSetup(user);
     }
   });
 

@@ -471,6 +471,13 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .field-optional{font-weight:500; text-transform:none; letter-spacing:0; color:var(--ink-faint,#9a9a9a); font-size:11px;}
 .remarks-block{border-top:1px dashed var(--line-strong); margin-top:2px; padding-top:12px;}
 .hist-remarks{margin-top:2px; font-size:12px; color:var(--ink-soft); background:var(--paper-raised); border-left:2.5px solid var(--brand); padding:4px 8px; border-radius:4px;}
+.hist-remarks-empty{color:var(--ink-faint,#9a9a9a); font-style:italic; border-left-color:var(--line-strong);}
+.hist-main .hist-remark-edit-btn{margin-top:6px; padding:4px 10px; font-size:11.5px;}
+.hist-remarks-edit{margin-top:6px;}
+.hist-remarks-edit textarea{width:100%; box-sizing:border-box; border:1.5px solid var(--line-strong); border-radius:var(--radius-sm); padding:8px 10px; font-size:12.5px; font-family:var(--font-body); background:var(--paper-raised); outline:none; resize:vertical;}
+.hist-remarks-edit textarea:focus{border-color:var(--brand); box-shadow:0 0 0 4px var(--brand-pale);}
+.hist-remarks-actions{display:flex; gap:8px; margin-top:8px;}
+.hist-remarks-actions .btn{padding:4px 12px; font-size:11.5px;}
 .field input, .field select, .field textarea{border:1.5px solid var(--line-strong); border-radius:var(--radius-sm); padding:10px 12px; font-size:13px; font-family:var(--font-body); background:var(--paper-raised); outline:none; transition:border-color .15s ease, box-shadow .15s ease;}
 .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--brand); box-shadow:0 0 0 4px var(--brand-pale);}
 .field-row{display:flex; gap:12px;}
@@ -566,6 +573,19 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-gauge-value span{font-size:11px; font-weight:600; color:var(--ink-faint);}
 .jp-gauge-caption{font-size:10px; color:var(--ink-soft); font-weight:700; margin-top:2px; font-family:var(--font-ui);}
 .cjs-progress-sub{font-size:10.5px; color:var(--ink-faint); margin:2px 0 12px; font-weight:500;}
+.jp-card-secondary{border-top:1px dashed var(--line-strong) !important;}
+.jp-gauge-fill-pending{stroke:var(--ink-faint,#9a9a9a);}
+.jp-gauge-fill-sentiment{stroke:var(--steel);}
+.sent-history{margin-top:12px; text-align:left; border-top:1px solid var(--line); padding-top:10px;}
+.sent-history-title{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); margin-bottom:6px;}
+.sent-history-empty{font-size:11.5px; color:var(--ink-faint); font-style:italic;}
+.sent-history-more{font-size:10px; color:var(--ink-faint); font-weight:600; margin-bottom:4px;}
+.sent-history-row{display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--line);}
+.sent-history-row:last-child{border-bottom:none;}
+.sent-history-emoji{font-size:15px; line-height:1; flex-shrink:0;}
+.sent-history-info{flex:1; min-width:0; display:flex; flex-direction:column; font-size:11.5px;}
+.sent-history-label{font-weight:700; color:var(--ink); font-family:var(--font-ui); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.sent-history-date{color:var(--ink-faint); font-size:10.5px; margin-top:1px;}
 .cjs-badges{display:flex; flex-direction:column; gap:8px;}
 .cjs-badge{border-radius:var(--radius-sm); padding:9px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; white-space:nowrap;}
 .cjs-badge-label{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); margin-bottom:0;}
@@ -747,6 +767,13 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
 .portal-login-screen{position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; padding:24px;
   background:radial-gradient(1100px 480px at 12% -8%, var(--brand-pale) 0%, transparent 55%), radial-gradient(900px 420px at 100% 0%, var(--gold-pale) 0%, transparent 48%), var(--paper);}
 .portal-login-screen.open{display:flex;}
+/* STEP 9 BUG FIX: the recruiter dashboard shell (topbar + main) starts
+   hidden so nothing renders — no placeholder name, no empty tab strip —
+   until init() has resolved Firebase's auth state and decided whether to
+   show the dashboard or the recruiter login screen. Overlays (login
+   screens, preview-exit-bar) are separate fixed-position elements and
+   are unaffected. */
+body.app-loading .topbar, body.app-loading main.content{display:none;}
 .portal-login-card{width:400px; max-width:100%; background:var(--paper-raised); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); border-top:3px solid var(--brand); padding:30px 28px 26px;}
 .portal-login-icon{width:44px; height:44px; border-radius:12px; background:var(--brand-pale); color:var(--brand-dark); display:flex; align-items:center; justify-content:center; margin-bottom:16px;}
 .portal-login-icon svg{width:21px; height:21px; display:block;}
@@ -838,14 +865,32 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
      (see the long comment above getAccessToken()), so token acquisition
      is handled by this library instead. -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- STEP 6: Candidate Journey PDF download. Used only by downloadCandidateJourneyPdf()
+     below — does not touch Calendar/GSI, Firestore, or any other flow. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body>
+<body class="app-loading">
 
 <div class="preview-exit-bar" id="preview-exit-bar" style="display:none;">
   <span class="preview-exit-bar-icon" id="preview-exit-bar-icon" aria-hidden="true"></span>
   <span id="preview-exit-bar-text">Preview Mode &ndash; This is a read-only preview of the Candidate Portal.</span>
   <button class="preview-exit-bar-switch" id="preview-exit-bar-switch"></button>
   <button class="btn btn-primary btn-sm" id="preview-exit-btn">Back to Recruiter View</button>
+</div>
+
+<!-- =================== RECRUITER LOGIN GATE (Step 9) =================== -->
+<div class="portal-login-screen" id="recruiter-login-screen">
+  <div class="portal-login-card">
+    <div class="portal-login-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div class="portal-login-title">Recruiter sign-in</div>
+    <div class="portal-login-sub">Sign in with your Google account to open the Candidate Journey dashboard.</div>
+    <button class="btn btn-primary" id="recruiter-login-btn" style="width:100%; justify-content:center;">Continue with Google</button>
+    <div class="portal-login-error" id="recruiter-login-error">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16v.01"/></svg>
+      <span id="recruiter-login-error-text">Sign-in failed. Please try again.</span>
+    </div>
+    <div class="portal-login-foot">You'll only see candidates assigned to you, plus any unassigned candidates.</div>
+  </div>
 </div>
 
 <!-- =================== CANDIDATE PORTAL LOGIN GATE =================== -->
@@ -944,6 +989,12 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
             <span class="role-option-sub">Interactive — actions are saved</span>
           </span>
           <svg class="role-option-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="role-option" id="role-opt-signout">
+          <span class="role-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>
+          <span class="role-option-body">
+            <span class="role-option-title">Sign out</span>
+          </span>
         </button>
       </div>
       <div class="role-panel-view" id="role-panel-picker" style="display:none;">
@@ -1058,6 +1109,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
         </div>
       </div>
       <div class="cand-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-download-pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download PDF</button>
         <button class="btn btn-ghost btn-sm" id="btn-preview-portal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg> Preview as Candidate</button>
         <button class="btn btn-ghost btn-sm" id="btn-share-journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8"/></svg> Share</button>
         <button class="btn btn-danger btn-sm" id="btn-close-journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M9 6V4a2 2 0 012-2h6a2 2 0 012 2v16a2 2 0 01-2 2h-6a2 2 0 01-2-2v-2"/><path d="M3 12h12M11 8l4 4-4 4"/></svg> Close journey</button>
@@ -1449,6 +1501,23 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
         console.warn('Google sign-in failed:', err && (err.code || err.message) || err);
         return null;
       });
+  }
+
+  // ---- STEP 7: recruiter-owner identity for new candidate records ----
+  // Reuses the existing Firebase Auth identity (ensureFirebaseSignIn) —
+  // no second auth system, no new prompts beyond what sign-in already
+  // requires. designation isn't available from Firebase Auth, so it's
+  // left null rather than invented.
+  async function getCurrentRecruiterInfo(){
+    const user = await ensureFirebaseSignIn();
+    if (!user) return { name: null, email: null, uid: null, phone: null, designation: null };
+    return {
+      name: user.displayName || null,
+      email: user.email || null,
+      uid: user.uid || null,
+      phone: user.phoneNumber || null,
+      designation: null
+    };
   }
 
   function getTokenClient(){
@@ -1922,7 +1991,8 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
       closed: !!o.closed, closureOutcome: o.closureOutcome || null,
       closureComment: o.closureComment || '', closureDate: o.closed ? new Date(addDays(todayIso(), -(o.closedDaysAgo||3))).toISOString() : null,
       checklist: buildDefaultChecklist(), surveys: [], portalEvents: [], portalInvitedAt: null,
-      recruitmentFeedback: {}, recruitmentFeedbackSubmittedAt: null
+      recruitmentFeedback: {}, recruitmentFeedbackSubmittedAt: null,
+      sentimentScore: null
     };
   }
 
@@ -2011,6 +2081,9 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     if (c.portalInvitedAt === undefined) c.portalInvitedAt = null;
     if (!c.recruitmentFeedback || typeof c.recruitmentFeedback !== 'object') c.recruitmentFeedback = {};
     if (c.recruitmentFeedbackSubmittedAt === undefined) c.recruitmentFeedbackSubmittedAt = null;
+    // STEP 7: backfill missing ownership as null only — never overwrite
+    // an existing recruiterOwner value.
+    if (!c.recruiterOwner) c.recruiterOwner = null;
     return c;
   }
   async function saveRoster(){
@@ -2036,7 +2109,41 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     try{ await db.collection('appdata').doc('reminderSettings').set(reminderSettings, { merge: true }); }catch(e){ console.warn('saveReminderSettings failed:', e); }
   }
 
+  // STEP 9 BUG FIX: loads the roster/reminder settings exactly once,
+  // on demand. Firestore's rules require an authenticated read, so
+  // calling this before auth is known just wastes a guaranteed-to-fail
+  // round trip — callers wait for the right moment (auth resolved, or a
+  // portal/share link that needs the roster regardless of recruiter auth).
+  let rosterLoaded = false;
+  async function ensureRosterLoaded(){
+    if (rosterLoaded) return;
+    roster = await loadRoster();
+    if (!roster.length){
+      roster = buildSeedRoster();
+      await saveRoster();
+    }
+    reminderSettings = await loadReminderSettings();
+    rosterLoaded = true;
+  }
+
   function candidate(id){ return roster.find(c=>c.id===id); }
+  // STEP 8: recruiter-specific visibility. UI-level only — Firestore
+  // structure/security is untouched, and unowned candidates (recruiterOwner
+  // null) always remain visible to everyone. Never auto-assigns ownership.
+  function visibleRoster(){
+    const uid = auth.currentUser && auth.currentUser.uid;
+    return roster.filter(c => !c.recruiterOwner || c.recruiterOwner.uid === uid);
+  }
+  // STEP 9: reflect the signed-in recruiter's identity in the existing
+  // profile chip — no new UI, just fills in real data instead of the
+  // placeholder "John Doe" / "JD".
+  function updateRecruiterProfileUI(user){
+    const nameEl = document.querySelector('#role-switch-wrap .profile-name');
+    const avatarEl = document.querySelector('#role-switch-wrap .profile-avatar');
+    const name = (user && user.displayName) || (user && user.email) || 'Recruiter';
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) avatarEl.textContent = initials(name);
+  }
   function currentTp(c){ return c.touchpoints[c.currentIndex] || null; }
   function isNewsletter(tp){ return tp && tp.type==='newsletter'; }
 
@@ -2142,6 +2249,23 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     // as a touchpoint actually completes (currentIndex advances).
     if (tier==='ontrack' && c.currentIndex===0) return {label:'Medium', tone:'amber'};
     return CONFIDENCE_META[tier];
+  }
+
+  // Sentiment Analysis — deliberately separate from Journey Progress and
+  // from Confidence (computeConfidence above, which stays untouched).
+  // STEP 3: computed from the candidate's own submitted sentiment
+  // check-ins (c.surveys — the same data the Candidate Portal already
+  // writes to and the "Candidate portal" activity card already reads).
+  // No second data structure, no invented values: with zero submitted
+  // responses this returns null and the gauge stays at "--%".
+  // Each response's level (1–5) is averaged, then mapped onto a 0–100
+  // scale where level 1 (Looking for other opportunities) = 0% and
+  // level 5 (Very Confident) = 100%.
+  function sentimentAnalysisScore(c){
+    const surveys = c.surveys || [];
+    if (!surveys.length) return null;
+    const avgLevel = surveys.reduce((sum,s)=>sum+s.level, 0) / surveys.length;
+    return Math.round(((avgLevel-1)/4) * 100);
   }
 
   // ------------------------------------------------------------------
@@ -2311,6 +2435,8 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   function renderSummary(c){
     const wrap = document.getElementById('summary-wrap');
     const conf = computeConfidence(c);
+    const sentimentScore = sentimentAnalysisScore(c);
+    const surveys = c.surveys || [];
     const action = nextBestAction(c);
     const counts = touchpointCounts(c);
     const totalWeeks = c.touchpoints[c.touchpoints.length-1].week;
@@ -2351,6 +2477,40 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
             <span>${action.text}</span>
           </div>` : ''}
+        </div>
+
+        <div class="jp-card jp-card-secondary">
+          <div class="cjs-eyebrow" data-tip="Candidate sentiment score, calculated from their submitted sentiment check-ins — separate from Journey Progress.">Sentiment analysis</div>
+          <div class="jp-gauge-wrap">
+            <svg viewBox="0 0 128 128">
+              <circle class="jp-gauge-track" cx="64" cy="64" r="${R}"/>
+              <circle class="jp-gauge-fill ${sentimentScore==null ? 'jp-gauge-fill-pending' : 'jp-gauge-fill-sentiment'}" cx="64" cy="64" r="${R}" stroke-dasharray="${CIRC}" stroke-dashoffset="${sentimentScore==null ? CIRC : CIRC - (sentimentScore/100)*CIRC}"/>
+            </svg>
+            <div class="jp-gauge-center">
+              <div class="jp-gauge-value">${sentimentScore==null ? '--' : sentimentScore}<span>%</span></div>
+              <div class="jp-gauge-caption">${sentimentScore==null ? 'Not yet scored' : 'Sentiment score'}</div>
+            </div>
+          </div>
+          <div class="cjs-progress-sub">${surveys.length ? `Based on ${surveys.length} check-in${surveys.length===1?'':'s'}` : 'Awaiting the candidate\'s first check-in'}</div>
+
+          <div class="sent-history">
+            <div class="sent-history-title">Sentiment history</div>
+            ${surveys.length ? `
+              ${surveys.length>5 ? `<div class="sent-history-more">+${surveys.length-5} earlier check-in${surveys.length-5===1?'':'s'}</div>` : ''}
+              ${surveys.slice(-5).map(s=>{
+                const dateLabel = s.week ? `Week ${s.week}` : fmtDate(s.submittedAt.slice(0,10));
+                const tone = (sentimentByLevel(s.level)||{}).tone || 'steel';
+                return `<div class="sent-history-row">
+                  <span class="sent-history-emoji">${s.emoji}</span>
+                  <span class="sent-history-info">
+                    <span class="sent-history-label">${s.label}</span>
+                    <span class="sent-history-date">${dateLabel}</span>
+                  </span>
+                  <span class="pill tone-${tone}">${s.level}/5</span>
+                </div>`;
+              }).join('')}
+            ` : `<div class="sent-history-empty">No sentiment check-ins yet.</div>`}
+          </div>
         </div>
 
         <div class="jp-link-seam">
@@ -2680,8 +2840,9 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     // Notice-period options start from the five standard brackets and pick up
     // any custom values actually in use (e.g. 42, 47, 50 days), so a custom
     // notice period is just as filterable as a standard one.
+    const vRoster = visibleRoster();
     const noticeSelect = document.getElementById('filter-notice');
-    const customNotice = [...new Set(roster.map(c=>c.noticeDays))]
+    const customNotice = [...new Set(vRoster.map(c=>c.noticeDays))]
       .filter(n=>!STANDARD_NOTICE_DAYS.includes(n)).sort((a,b)=>a-b);
     const noticeKey = customNotice.join(',');
     if (noticeSelect.dataset.rendered !== noticeKey){
@@ -2696,7 +2857,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     // current filters, so the dropdown itself never shrinks as you narrow
     // the list.
     const roleSelect = document.getElementById('filter-role');
-    const roles = [...new Set(roster.map(c=>c.role))].sort();
+    const roles = [...new Set(vRoster.map(c=>c.role))].sort();
     const roleOptionsHtml = `<option value="all">All roles</option>` + roles.map(r=>`<option value="${r}">${r}</option>`).join('');
     if (roleSelect.dataset.rendered !== roles.join('|')){
       roleSelect.innerHTML = roleOptionsHtml;
@@ -2704,7 +2865,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
       roleSelect.dataset.rendered = roles.join('|');
     }
 
-    const filtered = roster.filter(c=>
+    const filtered = vRoster.filter(c=>
       (filterNotice==='all' || c.noticeDays===parseInt(filterNotice,10)) &&
       (filterRole==='all' || c.role===filterRole) &&
       (!filterJoinFrom || c.joinDate>=filterJoinFrom) &&
@@ -3258,19 +3419,222 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
 
   }
 
+  // Tracks which completed-touchpoint's remark box is currently open for
+  // editing in the "Completed so far" panel. Purely a display/edit concern —
+  // it never touches tp.currentIndex, tp.history status, calendar sync,
+  // journey-progress math, or sentiment/confidence scoring.
+  let historyEditingIdx = null;
+  function escHtml(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
   function renderHistory(c){
     const done = c.touchpoints.slice(0, c.currentIndex);
     document.getElementById('panel-history').innerHTML = done.length ? done.map((tp,i)=>{
       const last = tp.history[tp.history.length-1] || {};
+      const isEditing = historyEditingIdx === i;
+      let remarksHtml;
+      if (isEditing){
+        remarksHtml = `<div class="hist-remarks-edit">
+          <textarea id="hist-remark-input-${i}" rows="3" placeholder="Add feedback or remarks for this touchpoint...">${escHtml(last.remarks||'')}</textarea>
+          <div class="hist-remarks-actions">
+            <button class="btn btn-primary btn-sm hist-remark-save" data-idx="${i}">Save</button>
+            <button class="btn btn-ghost btn-sm hist-remark-cancel" data-idx="${i}">Cancel</button>
+          </div>
+        </div>`;
+      } else if (last.remarks){
+        remarksHtml = `<div class="hist-remarks">📋 ${escHtml(last.remarks)}</div>
+          <button class="btn btn-ghost btn-sm hist-remark-edit-btn" data-idx="${i}">Edit</button>`;
+      } else {
+        remarksHtml = `<div class="hist-remarks hist-remarks-empty">No remarks added</div>
+          <button class="btn btn-ghost btn-sm hist-remark-edit-btn" data-idx="${i}">Add remark</button>`;
+      }
       return `<div class="hist-row">
         <div class="hist-icon">✓</div>
         <div class="hist-main">
           <div class="hist-title">Week ${tp.week} · ${ACT[tp.type].label} — completed</div>
           <div class="hist-sub">${fmtDate(tp.date)}${last.comments?' · '+last.comments:''}</div>
-          ${last.remarks ? `<div class="hist-remarks">📋 Post-connect remarks: ${last.remarks}</div>` : ''}
+          ${remarksHtml}
         </div>
       </div>`;
     }).join('') : `<div class="empty-note">Nothing completed yet.</div>`;
+
+    if (!done.length) return;
+    document.querySelectorAll('#panel-history .hist-remark-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        historyEditingIdx = parseInt(btn.getAttribute('data-idx'),10);
+        renderHistory(c);
+      });
+    });
+    document.querySelectorAll('#panel-history .hist-remark-cancel').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        historyEditingIdx = null;
+        renderHistory(c);
+      });
+    });
+    document.querySelectorAll('#panel-history .hist-remark-save').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const idx = parseInt(btn.getAttribute('data-idx'),10);
+        const tp = c.touchpoints[idx];
+        if (!tp.history || !tp.history.length) return;
+        const input = document.getElementById('hist-remark-input-'+idx);
+        const val = input ? input.value.trim() : '';
+        // Only the latest history entry's remark is updated in place —
+        // no version/audit history is created, and completed status,
+        // unlock state, calendar sync, progress and scoring are untouched.
+        tp.history[tp.history.length-1].remarks = val || null;
+        await saveRoster();
+        historyEditingIdx = null;
+        toast('Remarks updated.');
+        renderHistory(c);
+      });
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // STEP 6: Candidate Journey PDF download.
+  // Read-only export — every value below is read from data/functions that
+  // already exist elsewhere in this file (c.*, ACT, fmtDate,
+  // engagementPct, sentimentAnalysisScore, computeConfidence,
+  // touchpointStatusFor, SENTIMENT_LEVELS). Nothing here writes to the
+  // candidate, Firestore, Calendar, or any other state — it only reads
+  // and formats.
+  // ------------------------------------------------------------------
+  function sanitizeFileName(name){
+    return String(name||'Candidate').trim().replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'') || 'Candidate';
+  }
+
+  function downloadCandidateJourneyPdf(id){
+    const c = candidate(id);
+    if (!c) return;
+    if (!window.jspdf || !window.jspdf.jsPDF){
+      toast('PDF library failed to load — check your connection and try again.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 48;
+    const bottomLimit = pageHeight - 48;
+    let y = 56;
+
+    function ensureSpace(extra){
+      if (y + extra > bottomLimit){ doc.addPage(); y = 56; }
+    }
+    function sectionHeading(text){
+      ensureSpace(30);
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,40,40);
+      doc.text(text, marginX, y);
+      y += 8;
+      doc.setDrawColor(200,200,200);
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 18;
+    }
+    function fieldLine(lbl, value){
+      ensureSpace(16);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(90,90,90);
+      doc.text(lbl, marginX, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
+      doc.text(String(value==null || value==='' ? '—' : value), marginX + 140, y);
+      y += 16;
+    }
+    function wrappedText(text, opts){
+      opts = opts || {};
+      doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+      doc.setFontSize(opts.size || 10.5);
+      const c3 = opts.color || [30,30,30];
+      doc.setTextColor(c3[0], c3[1], c3[2]);
+      const indent = opts.indent || 0;
+      const lines = doc.splitTextToSize(String(text), pageWidth - marginX*2 - indent);
+      lines.forEach(ln=>{
+        ensureSpace(14);
+        doc.text(ln, marginX + indent, y);
+        y += 14;
+      });
+    }
+
+    // ---- Title ----
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(15,15,15);
+    doc.text('Candidate Journey Report', marginX, y);
+    y += 24;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120);
+    doc.text(`Generated ${new Date().toLocaleString('en-GB')}`, marginX, y);
+    y += 26;
+
+    // ---- Candidate details ----
+    sectionHeading('Candidate Details');
+    fieldLine('Name', c.name);
+    fieldLine('Role', c.role);
+    fieldLine('Notice period', c.noticeDays!=null ? `${c.noticeDays} days` : '—');
+    fieldLine('Offer date', c.offerDate ? fmtDate(c.offerDate) : '—');
+    fieldLine('Join date', c.joinDate ? fmtDate(c.joinDate) : '—');
+    fieldLine('Phone', c.phone || 'No phone on file');
+    fieldLine('Email', c.email || 'No email on file');
+    fieldLine('Journey status', c.closed ? `Closed${c.closureOutcome ? ' — '+c.closureOutcome : ''}` : 'Active');
+    y += 6;
+
+    // ---- Journey summary: reuses the exact same functions the UI reads ----
+    sectionHeading('Journey Summary');
+    fieldLine('Journey progress', `${engagementPct(c)}%`);
+    const sentScore = sentimentAnalysisScore(c);
+    fieldLine('Sentiment analysis', sentScore==null ? '-- / Not yet scored' : `${sentScore}%`);
+    fieldLine('Confidence level', computeConfidence(c).label);
+    y += 6;
+
+    // ---- Touchpoint timeline ----
+    sectionHeading('Journey / Touchpoint Timeline');
+    c.touchpoints.forEach((tp, i)=>{
+      const meta = ACT[tp.type];
+      const status = touchpointStatusFor(c, i);
+      ensureSpace(18);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,20,20);
+      doc.text(`Week ${tp.week} · ${meta.label}`, marginX, y);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,90);
+      const statusW = doc.getTextWidth(status.label);
+      doc.text(status.label, pageWidth - marginX - statusW, y);
+      y += 15;
+
+      let dateLine;
+      if (i < c.currentIndex){
+        const last = tp.history[tp.history.length-1] || {};
+        dateLine = `Completed on ${last.date ? fmtDate(last.date.slice(0,10)) : fmtDate(tp.date)}`;
+      } else if (i === c.currentIndex){
+        dateLine = (meta.isMeeting && tp.inviteState==='scheduled')
+          ? `Scheduled for ${fmtDate(tp.date)}${tp.time ? ' · '+tp.time : ''}`
+          : `Target date ${fmtDate(tp.date)}`;
+      } else {
+        dateLine = `Planned for ${fmtDate(tp.date)}`;
+      }
+      wrappedText(dateLine, { size:10, color:[70,70,70] });
+
+      if (i < c.currentIndex){
+        const last = tp.history[tp.history.length-1] || {};
+        wrappedText(`Remarks: ${last.remarks ? last.remarks : 'No remarks added'}`, { size:10 });
+      }
+      y += 8;
+    });
+
+    // ---- Sentiment history / check-ins ----
+    sectionHeading('Sentiment History / Check-ins');
+    const surveys = c.surveys || [];
+    if (!surveys.length){
+      wrappedText('-- / Not yet scored — no sentiment check-ins submitted yet.');
+    } else {
+      surveys.forEach(s=>{
+        ensureSpace(16);
+        const dateStr = s.submittedAt ? fmtDate(s.submittedAt.slice(0,10)) : '—';
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(20,20,20);
+        doc.text(`Week ${s.week!=null ? s.week : '—'} — ${s.label || '—'} (${dateStr})`, marginX, y);
+        y += 15;
+        if (s.comment){
+          wrappedText(s.comment, { size:10, color:[80,80,80] });
+        }
+        y += 4;
+      });
+    }
+
+    doc.save(`Candidate-Journey-${sanitizeFileName(c.name)}.pdf`);
   }
 
   function renderJourney(id, opts){
@@ -3635,7 +3999,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   function csvEscape(v){ const s=String(v==null?'':v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
   document.getElementById('btn-export-closed').addEventListener('click', ()=>{
     const q = document.getElementById('global-search').value.trim().toLowerCase();
-    const filtered = roster.filter(c=>
+    const filtered = visibleRoster().filter(c=>
       (filterNotice==='all' || c.noticeDays===parseInt(filterNotice,10)) &&
       (filterRole==='all' || c.role===filterRole) &&
       (!filterJoinFrom || c.joinDate>=filterJoinFrom) &&
@@ -3768,12 +4132,21 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     const noticeValid = Number.isInteger(noticeDays) && noticeDays>=1 && noticeDays<=180;
     if (!name||!role||!joinDate||!noticeValid){ document.getElementById('nc-error').classList.add('show'); return; }
     const offerDate = todayIso();
+    // STEP 7: attach the authenticated recruiter's identity as the
+    // owner of this new candidate record, reusing the existing Firebase
+    // Auth sign-in flow (no second auth system, no manual entry).
+    const recruiterInfo = await getCurrentRecruiterInfo();
     const c = {
       id:uid(), name, role, noticeDays, phone, email, offerDate, joinDate,
       touchpoints: buildTouchpoints(noticeDays, offerDate),
       currentIndex:0, closed:false, closureOutcome:null, closureComment:'', closureDate:null,
       checklist: buildDefaultChecklist(), surveys: [], portalEvents: [], portalInvitedAt: null,
-      recruitmentFeedback: {}, recruitmentFeedbackSubmittedAt: null
+      recruitmentFeedback: {}, recruitmentFeedbackSubmittedAt: null,
+      // Sentiment Analysis is a separate insight from Journey Progress and
+      // Confidence. Step 3 will compute this from response-scoring logic —
+      // for now it stays null and the UI shows "--%" until that lands.
+      sentimentScore: null,
+      recruiterOwner: recruiterInfo
     };
     roster.push(c);
     await saveRoster();
@@ -3991,7 +4364,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   }
   function renderRolePickerList(q){
     const query = (q||'').trim().toLowerCase();
-    const matches = roster.filter(c=>!query || c.name.toLowerCase().includes(query) || (c.role||'').toLowerCase().includes(query)).slice(0,25);
+    const matches = visibleRoster().filter(c=>!query || c.name.toLowerCase().includes(query) || (c.role||'').toLowerCase().includes(query)).slice(0,25);
     rolePickerList.innerHTML = matches.length ? matches.map(c=>`
       <button class="role-picker-row" data-cid="${c.id}">
         <span class="role-picker-avatar">${initials(c.name)}</span>
@@ -4013,6 +4386,13 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   document.getElementById('role-panel').addEventListener('click', e=>e.stopPropagation());
   document.getElementById('role-opt-preview').addEventListener('click', ()=>goToRoleAction('preview'));
   document.getElementById('role-opt-test').addEventListener('click', ()=>goToRoleAction('test'));
+  // STEP 9: sign the recruiter out of the existing Firebase Auth session.
+  // No candidate data is touched — onAuthStateChanged (wired in init)
+  // handles returning to the login screen.
+  document.getElementById('role-opt-signout').addEventListener('click', ()=>{
+    closeRoleSwitch();
+    auth.signOut();
+  });
   document.getElementById('role-panel-back').addEventListener('click', ()=>{ showRolePanel('roles'); pendingRoleTarget=null; });
   rolePickerSearch.addEventListener('input', (e)=>renderRolePickerList(e.target.value));
   document.addEventListener('click', ()=>{ if (roleSwitchOpen) closeRoleSwitch(); });
@@ -4055,6 +4435,7 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
   function closeShare(){ shareOverlay.classList.remove('open'); shareModal.classList.remove('open'); }
   document.getElementById('btn-share-journey').addEventListener('click', openShare);
   document.getElementById('btn-preview-portal').addEventListener('click', ()=>previewPortal(currentId));
+  document.getElementById('btn-download-pdf').addEventListener('click', ()=>downloadCandidateJourneyPdf(currentId));
   document.getElementById('preview-exit-btn').addEventListener('click', exitPortalPreview);
   shareOverlay.addEventListener('click', closeShare);
   document.getElementById('share-close').addEventListener('click', closeShare);
@@ -4084,34 +4465,100 @@ body.preview-mode #view-portal{pointer-events:none; -webkit-user-select:none; us
     toast(`Portal invite emailed to ${c.email || c.name}`);
   });
 
+  // STEP 9: recruiter login screen — reuses the existing Firebase Google
+  // sign-in flow (ensureFirebaseSignIn). Separate from Calendar OAuth
+  // (getAccessToken/getTokenClient), which is untouched.
+  // STEP 9 BUG FIX: Google's sign-in popup is not supported when the app
+  // is opened directly as a file:// page (browsers treat file:// as an
+  // opaque origin) — surface that plainly instead of the button silently
+  // doing nothing. When served over http/https (localhost or Firebase
+  // Hosting), this check is skipped and sign-in proceeds as before.
+  document.getElementById('recruiter-login-btn').addEventListener('click', async ()=>{
+    const errEl = document.getElementById('recruiter-login-error');
+    const errText = document.getElementById('recruiter-login-error-text');
+    errEl.classList.remove('show');
+    if (location.protocol === 'file:'){
+      errText.textContent = "Google sign-in isn't supported when this file is opened directly (file://). Serve it over http/https — e.g. run a local server or open the deployed Firebase Hosting link — then try again.";
+      errEl.classList.add('show');
+      return;
+    }
+    const user = await ensureFirebaseSignIn();
+    if (!user){
+      errText.textContent = 'Sign-in failed or was cancelled. Please try again.';
+      errEl.classList.add('show');
+    }
+  });
+
   /* ============================================================
      INIT
      ============================================================ */
   (async function init(){
-    roster = await loadRoster();
-    if (!roster.length){
-      roster = buildSeedRoster();
-      await saveRoster();
-    }
-    reminderSettings = await loadReminderSettings();
-
     // A ?share=<candidateId> link drops the viewer straight into a
     // read-only snapshot of that journey — no overview, no edit controls.
     // A ?portal=<candidateId> link drops the candidate into their own
-    // interactive portal (#10) instead.
+    // interactive portal (#10) instead. Neither of these is a recruiter
+    // flow, so neither requires the recruiter login gate below — but
+    // both need the roster loaded to resolve the candidate id first.
     const params = new URLSearchParams(location.search);
     const shareId = params.get('share');
     const portalId = params.get('portal');
-    if (portalId && candidate(portalId)){
-      gatePortalLogin(portalId);
-    } else if (shareId && candidate(shareId)){
-      shareView = true;
-      document.body.classList.add('share-view');
-      openJourney(shareId);
-    } else {
+    if (portalId || shareId){
+      await ensureRosterLoaded();
+      if (portalId && candidate(portalId)){
+        document.body.classList.remove('app-loading');
+        gatePortalLogin(portalId);
+        return;
+      }
+      if (shareId && candidate(shareId)){
+        document.body.classList.remove('app-loading');
+        shareView = true;
+        document.body.classList.add('share-view');
+        openJourney(shareId);
+        return;
+      }
+    }
+
+    // STEP 9 BUG FIX: wait for Firebase's *first* auth-state resolution
+    // before deciding anything. Neither the login screen nor the
+    // dashboard is shown until this resolves, so an already-authenticated
+    // user never sees a login-screen flash. auth.currentUser is not read
+    // directly for this decision — only the resolved callback value is
+    // trusted. The roster (a Firestore read gated by auth) is only
+    // fetched once we know a recruiter is actually signed in, instead of
+    // a guaranteed-to-fail read blocking the login screen from appearing.
+    const loginScreen = document.getElementById('recruiter-login-screen');
+    const firstUser = await Promise.race([
+      new Promise(resolve=>{
+        const unsubscribe = auth.onAuthStateChanged(user=>{ unsubscribe(); resolve(user); });
+      }),
+      // Safety net only — if auth state genuinely never resolves (e.g. a
+      // restrictive local file:// environment), fall back to the login
+      // screen after 4s instead of leaving the app hidden forever.
+      new Promise(resolve=>setTimeout(()=>resolve(null), 4000))
+    ]);
+    document.body.classList.remove('app-loading');
+    if (firstUser){
+      await ensureRosterLoaded();
+      updateRecruiterProfileUI(firstUser);
       renderOverview();
       renderNotifBell();
+    } else {
+      loginScreen.classList.add('open');
     }
+
+    // Keep the dashboard in sync with later sign-in (from the login
+    // screen) and sign-out (Step 9's Sign out option).
+    auth.onAuthStateChanged(async user=>{
+      if (user){
+        loginScreen.classList.remove('open');
+        await ensureRosterLoaded();
+        updateRecruiterProfileUI(user);
+        renderOverview();
+        renderNotifBell();
+      } else {
+        loginScreen.classList.add('open');
+      }
+    });
   })();
 })();
 </script>

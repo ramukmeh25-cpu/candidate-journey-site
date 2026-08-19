@@ -498,6 +498,10 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .contact-radio:hover{border-color:var(--ink-faint);}
 .contact-radio input{accent-color:var(--brand);}
 .contact-radio input:checked ~ span, .contact-radio:has(input:checked){color:var(--brand-dark); border-color:var(--brand); background:var(--brand-pale);}
+/* MODIFICATION 3: fixed (non-selectable) contact method — reuses the
+   "checked" look of .contact-radio above, just without the radio input
+   or cursor:pointer, since there's nothing to choose between anymore. */
+.contact-fixed{border:1.5px solid var(--brand); border-radius:var(--radius-sm); padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--brand-dark); background:var(--brand-pale); display:inline-flex; align-items:center; cursor:default;}
 
 /* ---------------- Today's tasks / action queue ---------------- */
 .queue-wrap{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-lg); padding:18px 20px; margin-bottom:20px; scroll-margin-top:18px; box-shadow:var(--shadow-sm);}
@@ -563,6 +567,30 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-link-seam{display:flex; align-items:center; justify-content:center; gap:6px; padding:7px 18px; background:var(--paper-sunk); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:9.5px; font-weight:700; font-family:var(--font-ui); color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em;}
 .jp-link-seam svg{width:11px; height:11px; color:var(--brand); flex-shrink:0;}
 .jp-card{padding:18px 18px 16px; text-align:center;}
+/* MODIFICATION 5: Journey Progress and Sentiment Analysis presented as two
+   equal, side-by-side insights (not gauge circles — see request "avoid
+   three large circular gauges" / "avoid decorative elements"), with
+   Confidence below as their derived result rather than a badge nested
+   inside the Journey Progress card. Reuses .jp-gauge-value/.jp-gauge-caption
+   (plain type styling, no longer wrapped in a circular gauge) and
+   .cjs-eyebrow/.cjs-badge-label/.cjs-progress-sub/.cjs-action so no new
+   type scale is introduced. */
+.jp-health-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); padding:16px 18px 0;}
+.jp-metrics-row{display:flex; padding:12px 18px 0;}
+.jp-metric{flex:1; min-width:0; text-align:center;}
+.jp-metric+.jp-metric{border-left:1px solid var(--line);}
+.jp-metrics-sub{text-align:center; padding:0 18px;}
+.jp-gauge-value-pending{color:var(--ink-faint);}
+.jp-confidence-row{text-align:center; border-top:1px solid var(--line); margin:13px 18px 0; padding:13px 0 16px;}
+.jp-confidence-value{font-family:var(--font-ui); font-weight:800; font-size:18px; text-transform:uppercase; letter-spacing:.03em; margin-top:3px;}
+.jp-confidence-value.tone-sage{color:var(--sage);}
+.jp-confidence-value.tone-amber{color:var(--amber-ink);}
+.jp-confidence-value.tone-clay{color:var(--clay);}
+.jp-confidence-value.tone-steel{color:var(--steel);}
+.jp-confidence-value.tone-brand{color:var(--brand-dark);}
+.jp-confidence-value.tone-flat{color:var(--ink-soft);}
+.jp-confidence-caption{font-size:10.5px; color:var(--ink-faint); font-weight:600; margin-top:3px;}
+@media (max-width:400px){ .jp-metrics-row{flex-direction:column; gap:12px;} .jp-metric+.jp-metric{border-left:none; border-top:1px solid var(--line); padding-top:12px;} }
 .cjs-eyebrow{font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); margin-bottom:2px;}
 .jp-gauge-wrap{position:relative; width:104px; height:104px; margin:8px auto 4px;}
 .jp-gauge-wrap svg{width:100%; height:100%; transform:rotate(-90deg);}
@@ -573,6 +601,8 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-gauge-value span{font-size:11px; font-weight:600; color:var(--ink-faint);}
 .jp-gauge-caption{font-size:10px; color:var(--ink-soft); font-weight:700; margin-top:2px; font-family:var(--font-ui);}
 .cjs-progress-sub{font-size:10.5px; color:var(--ink-faint); margin:2px 0 12px; font-weight:500;}
+.jp-group .cjs-action{margin-left:18px; margin-right:18px;}
+.jp-group .sent-history{margin-left:18px; margin-right:18px; padding-bottom:16px;}
 .jp-card-secondary{border-top:1px dashed var(--line-strong) !important;}
 .jp-gauge-fill-pending{stroke:var(--ink-faint,#9a9a9a);}
 .jp-gauge-fill-sentiment{stroke:var(--steel);}
@@ -1441,10 +1471,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     90:[[1,'hr'],[2,'business'],[3,'mock'],[4,'newsletter'],[5,'hr'],[6,'business'],[7,'mock'],[8,'newsletter'],[10,'mock'],[12,'newsletter']]
   };
   const ACT = {
-    hr:{label:'HR Connect', purpose:'Walk through onboarding, documentation and benefits.', isMeeting:true},
-    business:{label:'Business Connect', purpose:'Introduce the hiring manager and the role.', isMeeting:true},
-    mock:{label:'Mock Call', purpose:'Prep the candidate for day one and build confidence.', isMeeting:true},
-    newsletter:{label:'Newsletter', purpose:'Share company news, culture and learning updates.', isMeeting:false}
+    hr:{label:'HR Connect', purpose:'Walk through onboarding, documentation and benefits.', isMeeting:true, contactMethod:'Google Meet'},
+    business:{label:'Business Connect', purpose:'Introduce the hiring manager and the role.', isMeeting:true, contactMethod:'Google Meet'},
+    mock:{label:'Mock Call', purpose:'Prep the candidate for day one and build confidence.', isMeeting:true, contactMethod:'Phone Call'},
+    newsletter:{label:'Newsletter', purpose:'Share company news, culture and learning updates.', isMeeting:false, contactMethod:null}
   };
   const HINTS = {
     hr:'Next best action: confirm the meeting link went out and prep onboarding talking points.',
@@ -1923,6 +1953,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   };
 
   function fmtDate(d){ const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+  // MODIFICATION 2: compact "17 Aug" form (no year) — used only by the
+  // recruiter-side Journey Trail nodes, where space is tight and the
+  // full date is already available on the active touchpoint/hero card.
+  function fmtDateShort(d){ const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
   // Indian financial year (Apr–Mar), used to group closed journeys for
   // reporting — e.g. a closure on 14 Jun 2026 falls in "FY 2026-27".
   function fyLabel(dateIso){
@@ -2061,7 +2095,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       closureComment: o.closureComment || '', closureDate: o.closed ? new Date(addDays(todayIso(), -(o.closedDaysAgo||3))).toISOString() : null,
       checklist: buildDefaultChecklist(), surveys: [], portalEvents: [], portalInvitedAt: null,
       recruitmentFeedback: {}, recruitmentFeedbackSubmittedAt: null,
-      sentimentScore: null
+      sentimentScore: null, recruiterRemarks: null
     };
   }
 
@@ -2150,6 +2184,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     if (c.portalInvitedAt === undefined) c.portalInvitedAt = null;
     if (!c.recruitmentFeedback || typeof c.recruitmentFeedback !== 'object') c.recruitmentFeedback = {};
     if (c.recruitmentFeedbackSubmittedAt === undefined) c.recruitmentFeedbackSubmittedAt = null;
+    // MODIFICATION 1: candidate-level general remark, separate from
+    // per-touchpoint "Completed so far" remarks. Backfill only — never
+    // overwrite an existing saved remark.
+    if (c.recruiterRemarks === undefined) c.recruiterRemarks = null;
     // STEP 7: backfill missing ownership as null only — never overwrite
     // an existing recruiterOwner value.
     if (!c.recruiterOwner) c.recruiterOwner = null;
@@ -2518,73 +2556,52 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       newsletter:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6.5l-10 7-10-7"/></svg>'
     };
 
-    const R = 57, CIRC = 2*Math.PI*R;
-    const dashOffset = CIRC - (pct/100)*CIRC;
-
     wrap.innerHTML = `
       <div class="jp-group">
-        <div class="jp-card">
-          <div class="cjs-eyebrow">Journey progress</div>
-          <div class="jp-gauge-wrap">
-            <svg viewBox="0 0 128 128">
-              <circle class="jp-gauge-track" cx="64" cy="64" r="${R}"/>
-              <circle class="jp-gauge-fill" cx="64" cy="64" r="${R}" stroke-dasharray="${CIRC}" stroke-dashoffset="${dashOffset}"/>
-            </svg>
-            <div class="jp-gauge-center">
-              <div class="jp-gauge-value">${pct}<span>%</span></div>
-              <div class="jp-gauge-caption">${c.currentIndex}/${c.touchpoints.length} done</div>
-            </div>
-          </div>
-          <div class="cjs-progress-sub">${totalWeeks}-week plan · ${c.noticeDays}-day notice</div>
-          <div class="cjs-badges">
-            <div class="cjs-badge tone-${conf.tone}">
-              <div class="cjs-badge-label" data-tip="Indicates the likelihood of the candidate joining based on engagement.">Confidence</div>
-              <div class="cjs-badge-value">${conf.label}</div>
-            </div>
-          </div>
-          ${action ? `<div class="cjs-action tone-${action.tone}" data-tip="Recommended next step for the recruiter.">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-            <span>${action.text}</span>
-          </div>` : ''}
-        </div>
+        <div class="jp-health-label">Candidate health</div>
 
-        <div class="jp-card jp-card-secondary">
-          <div class="cjs-eyebrow" data-tip="Candidate sentiment score, calculated from their submitted sentiment check-ins — separate from Journey Progress.">Sentiment analysis</div>
-          <div class="jp-gauge-wrap">
-            <svg viewBox="0 0 128 128">
-              <circle class="jp-gauge-track" cx="64" cy="64" r="${R}"/>
-              <circle class="jp-gauge-fill ${sentimentScore==null ? 'jp-gauge-fill-pending' : 'jp-gauge-fill-sentiment'}" cx="64" cy="64" r="${R}" stroke-dasharray="${CIRC}" stroke-dashoffset="${sentimentScore==null ? CIRC : CIRC - (sentimentScore/100)*CIRC}"/>
-            </svg>
-            <div class="jp-gauge-center">
-              <div class="jp-gauge-value">${sentimentScore==null ? '--' : sentimentScore}<span>%</span></div>
-              <div class="jp-gauge-caption">${sentimentScore==null ? 'Not yet scored' : 'Sentiment score'}</div>
-            </div>
+        <div class="jp-metrics-row">
+          <div class="jp-metric">
+            <div class="cjs-eyebrow">Journey progress</div>
+            <div class="jp-gauge-value">${pct}<span>%</span></div>
+            <div class="jp-gauge-caption">${c.currentIndex} of ${c.touchpoints.length} complete</div>
           </div>
-          <div class="cjs-progress-sub">${surveys.length ? `Based on ${surveys.length} check-in${surveys.length===1?'':'s'}` : 'Awaiting the candidate\'s first check-in'}</div>
-
-          <div class="sent-history">
-            <div class="sent-history-title">Sentiment history</div>
-            ${surveys.length ? `
-              ${surveys.length>5 ? `<div class="sent-history-more">+${surveys.length-5} earlier check-in${surveys.length-5===1?'':'s'}</div>` : ''}
-              ${surveys.slice(-5).map(s=>{
-                const dateLabel = s.week ? `Week ${s.week}` : fmtDate(s.submittedAt.slice(0,10));
-                const tone = (sentimentByLevel(s.level)||{}).tone || 'steel';
-                return `<div class="sent-history-row">
-                  <span class="sent-history-emoji">${s.emoji}</span>
-                  <span class="sent-history-info">
-                    <span class="sent-history-label">${s.label}</span>
-                    <span class="sent-history-date">${dateLabel}</span>
-                  </span>
-                  <span class="pill tone-${tone}">${s.level}/5</span>
-                </div>`;
-              }).join('')}
-            ` : `<div class="sent-history-empty">No sentiment check-ins yet.</div>`}
+          <div class="jp-metric">
+            <div class="cjs-eyebrow" data-tip="Candidate sentiment score, calculated from their submitted sentiment check-ins — separate from Journey Progress.">Sentiment analysis</div>
+            <div class="jp-gauge-value${sentimentScore==null ? ' jp-gauge-value-pending' : ''}">${sentimentScore==null ? '--' : sentimentScore}<span>%</span></div>
+            <div class="jp-gauge-caption">${sentimentScore==null ? 'Not yet scored' : 'Sentiment score'}</div>
           </div>
         </div>
 
-        <div class="jp-link-seam">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-          <span>Breaks down the progress above</span>
+        <div class="cjs-progress-sub jp-metrics-sub">${totalWeeks}-week plan · ${c.noticeDays}-day notice · ${surveys.length ? `${surveys.length} check-in${surveys.length===1?'':'s'} submitted` : 'awaiting first check-in'}</div>
+        ${action ? `<div class="cjs-action tone-${action.tone}" data-tip="Recommended next step for the recruiter.">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          <span>${action.text}</span>
+        </div>` : ''}
+
+        <div class="jp-confidence-row">
+          <div class="cjs-badge-label" data-tip="Indicates the likelihood of the candidate joining, derived from journey progress and sentiment together.">Confidence</div>
+          <div class="jp-confidence-value tone-${conf.tone}">${conf.label}</div>
+          <div class="jp-confidence-caption">Based on journey progress + sentiment</div>
+        </div>
+
+        <div class="sent-history">
+          <div class="sent-history-title">Sentiment history</div>
+          ${surveys.length ? `
+            ${surveys.length>5 ? `<div class="sent-history-more">+${surveys.length-5} earlier check-in${surveys.length-5===1?'':'s'}</div>` : ''}
+            ${surveys.slice(-5).map(s=>{
+              const dateLabel = s.week ? `Week ${s.week}` : fmtDate(s.submittedAt.slice(0,10));
+              const tone = (sentimentByLevel(s.level)||{}).tone || 'steel';
+              return `<div class="sent-history-row">
+                <span class="sent-history-emoji">${s.emoji}</span>
+                <span class="sent-history-info">
+                  <span class="sent-history-label">${s.label}</span>
+                  <span class="sent-history-date">${dateLabel}</span>
+                </span>
+                <span class="pill tone-${tone}">${s.level}/5</span>
+              </div>`;
+            }).join('')}
+          ` : `<div class="sent-history-empty">No sentiment check-ins yet.</div>`}
         </div>
 
         <div class="jtp-card">
@@ -2610,8 +2627,45 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
         </div>
 
         ${renderPortalActivityCard(c)}
+        ${renderRecruiterRemarksCard(c)}
       </div>
     `;
+    wireRecruiterRemarksCard(c);
+  }
+
+  // ---- Recruiter Remarks: a single candidate-level general note, kept
+  // separate from the per-touchpoint "Completed so far" remarks above
+  // (tp.history[].remarks). Reuses the existing candidate object + the
+  // same saveRoster() persistence — no new field beyond one simple
+  // property, no new Firestore collection. Always editable (no separate
+  // edit-toggle state like the history remarks have) since there's only
+  // ever one candidate-level remark to manage.
+  function renderRecruiterRemarksCard(c){
+    return `
+      <div class="jtp-card">
+        <div class="jtp-label-row">
+          <div class="jtp-label">Recruiter remarks</div>
+        </div>
+        <div class="jtp-body">
+          <div class="hist-remarks-edit" style="margin-top:0;">
+            <textarea id="recruiter-remarks-input" rows="3" placeholder="Add a general note about this candidate (optional)...">${escHtml(c.recruiterRemarks||'')}</textarea>
+            <div class="hist-remarks-actions">
+              <button class="btn btn-primary btn-sm" id="recruiter-remarks-save">Save Remarks</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+  function wireRecruiterRemarksCard(c){
+    const btn = document.getElementById('recruiter-remarks-save');
+    if (!btn) return;
+    btn.addEventListener('click', async ()=>{
+      const input = document.getElementById('recruiter-remarks-input');
+      const val = input ? input.value.trim() : '';
+      c.recruiterRemarks = val || null;
+      await saveRoster();
+      toast('Remarks saved.');
+    });
   }
 
   // ---- #17: Candidate portal activity, surfaced on the recruiter side ----
@@ -3037,16 +3091,23 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       if (i===c.currentIndex) cls += ' current';
       if (opts.justCompletedIdx===i) cls += ' just-done';
       const isDone = i<c.currentIndex;
+      // MODIFICATION 2: Journey Trail cleanup — the trail now answers
+      // "where is this candidate", not "what time is the meeting". Full
+      // date/time (and the "Planned · <date>" scheduling detail) stays on
+      // the active touchpoint/hero card; the trail only shows a concise
+      // state label, plus a short date for completed nodes when there's
+      // room for it. Underlying status/tone/data (touchpointStatusFor,
+      // tp.date/tp.time, journey progress calc) is untouched — this only
+      // changes what's displayed here.
+      const stateLabel = (i > c.currentIndex && st.key==='planned') ? 'Upcoming' : st.label;
       const compDate = isDone ? completedDateFor(tp) : null;
-      const isUnscheduled = st.key==='draft' || st.key==='pending' || st.key==='planned';
-      const isConfirmed = st.key==='scheduled';
       const dateLine = compDate
-        ? `<div class="trail-date" data-tip="Date when the recruiter marked this touchpoint as completed.">${fmtDate(compDate)}</div>`
-        : (!isDone && tp.date ? `<div class="trail-date trail-date-scheduled"${isUnscheduled ? ' data-tip="A system-generated target date — no meeting is booked yet."' : ''}>${isUnscheduled ? 'Planned · ' : ''}${fmtDate(tp.date)}${isConfirmed && tp.time ? ' · '+tp.time : ''}</div>` : '');
+        ? `<div class="trail-date" data-tip="Date when the recruiter marked this touchpoint as completed.">${fmtDateShort(compDate)}</div>`
+        : '';
       return `<div class="trail-node ${cls}" data-idx="${i}">
         <div class="trail-stamp">${i<c.currentIndex ? '✓' : tp.week}</div>
         <div class="trail-caption">${ACT[tp.type].label}</div>
-        <div class="trail-state">${st.label}</div>
+        <div class="trail-state">${stateLabel}</div>
         ${dateLine}
       </div>`;
     }).join('');
@@ -3195,7 +3256,21 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     // keep the original three-way Complete / Reschedule / No Response log,
     // unlocked as soon as they're sent.
     const outcomeUnlocked = meta.isMeeting ? meetingDone : inviteSent;
-    const outcomeSectionHtml = outcomeUnlocked ? `
+    // MODIFICATION 4: Newsletter is a simple send-and-log touchpoint, not a
+    // meeting — it gets its own minimal one-button flow instead of the
+    // Complete/Reschedule/No Response segmented control used by HR/Business/
+    // Mock Call. No real email-sending mechanism exists anywhere in this
+    // file (the "completed" outcome has only ever been a status log, for
+    // every touchpoint type) — so "Send Newsletter" reuses that same
+    // existing log-and-advance action (save-completed) rather than inventing
+    // one. Gated on isNewsletter(tp) specifically (not the broader
+    // !meta.isMeeting check the other blocks below still use) so HR,
+    // Business and Mock Call are completely untouched.
+    const outcomeSectionHtml = outcomeUnlocked ? (isNewsletter(tp) ? `
+          <div class="field-block show" id="block-completed">
+            <div class="field"><label for="f-comments">Comments <span class="field-optional">(optional)</span></label><textarea id="f-comments" rows="2" placeholder="e.g. Newsletter sent, no issues."></textarea></div>
+            <button class="btn btn-primary btn-sm" id="save-completed" style="align-self:flex-start;">Send Newsletter</button>
+          </div>` : `
           <div class="seg-label">What happened with this touchpoint?</div>
           <div class="seg ${meta.isMeeting ? 'seg-2' : ''}" id="outcome-seg">
             <button class="seg-btn" data-v="completed" data-tip="Record that the meeting was conducted successfully.">
@@ -3215,10 +3290,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           <div class="field-block" id="block-completed">
             ${meta.isMeeting ? `<div class="field"><label>Contact method</label>
               <div class="contact-radios" id="f-contact">
-                <label class="contact-radio"><input type="radio" name="contact-method" value="Phone Call" checked><span>Phone Call</span></label>
-                <label class="contact-radio"><input type="radio" name="contact-method" value="Microsoft Teams"><span>Microsoft Teams</span></label>
-                <label class="contact-radio"><input type="radio" name="contact-method" value="Zoom"><span>Zoom</span></label>
-                <label class="contact-radio"><input type="radio" name="contact-method" value="Google Meet"><span>Google Meet</span></label>
+                <div class="contact-fixed" data-tip="Set automatically for this touchpoint type — not selectable.">${meta.contactMethod}</div>
               </div>
             </div>` : ''}
             <div class="field"><label for="f-comments">Comments</label><textarea id="f-comments" rows="2" placeholder="${meta.isMeeting?'e.g. Candidate understands onboarding, no concerns raised.':'e.g. Newsletter sent, no issues.'}"></textarea></div>
@@ -3242,7 +3314,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           <div class="field-block" id="block-no_response">
             <div class="field"><label for="f-nr-comments">Comments</label><textarea id="f-nr-comments" rows="2" placeholder="e.g. Called twice, no answer, left voicemail."></textarea></div>
             <button class="btn btn-primary btn-sm" id="save-no_response" style="align-self:flex-start;">Log &amp; schedule follow-up (+2 days)</button>
-          </div>` : `
+          </div>`) : `
           <div class="outcome-locked">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <div>${meta.isMeeting
@@ -3440,10 +3512,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     const saveCompleted = document.getElementById('save-completed');
     if (saveCompleted) saveCompleted.addEventListener('click', async ()=>{
       const comments = document.getElementById('f-comments').value.trim();
-      const contactChecked = document.querySelector('input[name="contact-method"]:checked');
+      // MODIFICATION 3: contact method is fixed per touchpoint type
+      // (meta.contactMethod), not recruiter-selected — no more reading a
+      // checked radio. Still written to the same tp.history[].contact
+      // field, so existing data shape/consumers (PDF, CSV, etc.) don't
+      // need to change.
       const remarksEl = document.getElementById('f-remarks');
       const remarks = remarksEl ? remarksEl.value.trim() : '';
-      tp.history.push({type:'completed', date:new Date().toISOString(), comments, contact: contactChecked?contactChecked.value:null, remarks: remarks || null});
+      tp.history.push({type:'completed', date:new Date().toISOString(), comments, contact: meta.isMeeting ? meta.contactMethod : null, remarks: remarks || null});
       tp.lastOutcome = null;
       const completedIdx = c.currentIndex;
       c.currentIndex++;
@@ -4215,7 +4291,8 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       // Confidence. Step 3 will compute this from response-scoring logic —
       // for now it stays null and the UI shows "--%" until that lands.
       sentimentScore: null,
-      recruiterOwner: recruiterInfo
+      recruiterOwner: recruiterInfo,
+      recruiterRemarks: null
     };
     roster.push(c);
     await saveRoster();
@@ -4247,8 +4324,9 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     const contactWrap = document.getElementById('etp-contact');
     if (meta.isMeeting){
       contactField.style.display='';
-      const methods = ['Phone Call','Microsoft Teams','Zoom','Google Meet'];
-      contactWrap.innerHTML = methods.map(m=>`<label class="contact-radio"><input type="radio" name="etp-contact-method" value="${m}" ${h && h.contact===m ? 'checked':''}><span>${m}</span></label>`).join('');
+      // MODIFICATION 3: contact method is fixed per touchpoint type — no
+      // longer a selectable list. Shown read-only for reference.
+      contactWrap.innerHTML = `<div class="contact-fixed" data-tip="Set automatically for this touchpoint type — not selectable.">${meta.contactMethod}</div>`;
     } else {
       contactField.style.display='none';
       contactWrap.innerHTML='';
@@ -4270,8 +4348,9 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       const remarksVal = document.getElementById('etp-remarks').value.trim();
       h.remarks = remarksVal || null;
     }
-    const contactChecked = document.querySelector('input[name="etp-contact-method"]:checked');
-    if (contactChecked) h.contact = contactChecked.value;
+    // MODIFICATION 3: contact method is fixed per touchpoint type and no
+    // longer editable here — h.contact (including any legacy value) is
+    // left as-is rather than being overwritten from a selection.
     await saveRoster();
     toast('Touchpoint notes updated.');
     closeEtp();

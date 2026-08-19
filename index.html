@@ -2130,7 +2130,6 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
 
   function buildSeedRoster(){
     return [
-      seedCandidate({name:'Priya Menon', role:'Senior Data Analyst', noticeDays:60, currentIndex:2, dueOffset:0, joinOffset:52}),
       seedCandidate({name:'Arjun Rao', role:'Backend Engineer', noticeDays:30, currentIndex:1, attempts:3, dueOffset:-4, joinOffset:18, lastReason:'No answer across three attempts — escalation candidate.'}),
       seedCandidate({name:'Kavya Iyer', role:'UX Designer', noticeDays:45, currentIndex:2, attempts:3, dueOffset:-2, joinOffset:26, lastReason:'Emails bounced back once, otherwise silent.'}),
       seedCandidate({name:'Rohit Sharma', role:'Product Manager', noticeDays:90, currentIndex:3, lastOutcome:'rescheduled', dueOffset:5, joinOffset:63, lastReason:'Candidate travelling, asked to push by a week.'}),
@@ -2257,6 +2256,23 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     if (!roster.length){
       roster = buildSeedRoster();
       await saveRoster();
+    } else {
+      // ONE-TIME DEMO CLEANUP: removes the demo candidate "Priya Menon"
+      // from the already-persisted Firestore roster. Guarded by a small
+      // persisted flag doc so this runs at most once ever, not a standing
+      // name-based filter applied on every load.
+      try{
+        const cleanupDoc = await db.collection('appdata').doc('priyaCleanup').get();
+        if (!cleanupDoc.exists){
+          const before = roster.length;
+          roster = roster.filter(c => c.name !== 'Priya Menon');
+          if (roster.length !== before) await saveRoster();
+          await db.collection('appdata').doc('priyaCleanup').set({
+            done: true,
+            at: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }catch(e){ console.warn('One-time Priya Menon cleanup skipped:', e); }
     }
     reminderSettings = await loadReminderSettings();
     rosterLoaded = true;

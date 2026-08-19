@@ -3212,22 +3212,22 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     if (meta.isMeeting){
       if (inviteState === 'scheduled' && tp._eventMissing){
         // The stored calendarEventId no longer resolves to a real Calendar
-        // event. tp.date/tp.time are left exactly as they were (also
-        // preserved in tp.history) — this is a distinct "previous meeting"
-        // state, not the normal confirmed card. Change date or time is the
-        // only action offered here, and it now starts the existing
-        // scheduling flow to create the replacement event.
+        // event. tp.date/tp.time are left exactly as they were. This is a
+        // simple, safe dead-end state: Change date or time just re-opens
+        // the normal existing-event flow, which will show this same
+        // message again until a valid event exists for this touchpoint.
+        // No replacement event is created automatically.
         meetRowHtml = `<div class="meeting-card" id="meet-row">
             <div class="mc-top">
               <div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
               <div class="mc-body">
                 <div class="mc-title">Calendar event unavailable</div>
-                <div class="mc-sub">Previous meeting — ${fmtDate(tp.date)}${tp.time ? ' · '+tp.time : ''}${tp._checking ? ' · checking for updates…' : ''}</div>
+                <div class="mc-sub">${fmtDate(tp.date)}${tp.time ? ' · '+tp.time : ''}${tp._checking ? ' · checking for updates…' : ''}</div>
               </div>
             </div>
-            <div class="invite-fail-note">⚠ The original Google Calendar event is no longer available. Use Change date or time to schedule a replacement — the previous meeting date will be retained.</div>
+            <div class="invite-fail-note">⚠ The Google Calendar event for this meeting could not be found.</div>
             <div class="mc-actions">
-              <button class="mc-action-btn" id="change-time-btn" type="button" data-tip="Schedules a replacement Google Calendar event for this meeting. The previous date is kept, not overwritten.">
+              <button class="mc-action-btn" id="change-time-btn" type="button" data-tip="Opens the real event in Google Calendar — change it there, and it syncs back here automatically.">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
                 Change date or time
               </button>
@@ -3235,21 +3235,12 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           </div>`;
       } else if (inviteState === 'scheduled'){
         const meetUrl = tp.meetLink || '#';
-        // If the last history entry is a replacement created after a
-        // missing Calendar event, surface the previous date/time right on
-        // the card so it's clear this meeting was replaced, not just
-        // scheduled fresh. Purely a display concern — doesn't affect
-        // inviteState, calendarEventId, or any scheduling logic.
-        const lastHist = (tp.history && tp.history[tp.history.length-1]) || null;
-        const replacedNote = (lastHist && lastHist.type === 'rescheduled' && lastHist.viaMissingEvent)
-          ? `<div class="mc-sub" style="opacity:.7">Previous meeting — ${escHtml(lastHist.from)} (original Calendar event unavailable)</div>` : '';
         meetRowHtml = `<div class="meeting-card${meetingDone ? ' tone-past' : ''}" id="meet-row">
             <div class="mc-top">
               <div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
               <div class="mc-body">
                 <div class="mc-title">Scheduled — confirmed in Google Calendar</div>
                 <div class="mc-sub">${fmtDate(tp.date)}${tp.time ? ' · '+tp.time : ''}${c.email ? ' · sent to '+c.email : ''}${tp._checking ? ' · checking for updates…' : ''}</div>
-                ${replacedNote}
               </div>
               ${meetUrl!=='#' ? `<a class="mc-link" href="${meetUrl}" target="_blank" rel="noopener" data-tip="Open the scheduled Google Meet.">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
@@ -3530,7 +3521,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       tp._checking = false;
       tp._eventMissing = true;
       if (win) win.close();
-      toast('The original Google Calendar event is no longer available. You can use "Change date or time" to schedule a replacement meeting. The previous meeting date will be retained.');
+      toast('The Google Calendar event for this meeting could not be found.');
       if (candidate(currentId)) renderHero(candidate(currentId));
       return;
     }
@@ -3544,65 +3535,6 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     });
   }
 
-  // ---- Replace a missing Calendar event, keeping the previous meeting ----
-  // Reached only when tp._eventMissing is true (the stored calendarEventId
-  // no longer resolves). Rather than editing an event that no longer
-  // exists, this reuses the exact same first-time scheduling path as
-  // handleScheduleInCalendar: HR creates a brand-new marker-tagged event in
-  // Calendar's own UI and it's read back the same way
-  // (findCalendarEventByMarker → writeConfirmedMeeting → the existing
-  // meetingDocRef onSnapshot sync). No new scheduling architecture, no new
-  // Firestore collection. The only addition is capturing the previous
-  // date/time before anything changes and recording it as a normal
-  // tp.history 'rescheduled' entry (same shape already used elsewhere) once
-  // the replacement is confirmed, so the old meeting is never silently
-  // overwritten.
-  async function handleReplaceMissingMeeting(c, tp){
-    const meta = ACT[tp.type];
-    const i = touchpointIndex(c, tp);
-    const prevDate = tp.date, prevTime = tp.time;
-    const tokenPromise = getAccessToken();
-    openGMeetInvite(c, tp, meta);
-    toast('Opening Google Calendar — create the replacement meeting there. The previous date will be kept.');
-    tp._checking = true;
-    renderHero(c);
-    const token = await tokenPromise;
-    if (!token){
-      console.warn('Calendar sync: no access token after replacement-meeting click — the Google consent popup was likely blocked or dismissed.');
-      toast('Calendar access wasn\'t granted, so this can\'t sync automatically. Allow the Google sign-in popup and try again.');
-      tp._checking = false;
-      if (candidate(currentId)) renderHero(candidate(currentId));
-      return;
-    }
-    onReturnFromCalendar(async () => {
-      const found = await pollForCalendarEvent(c.id, i, calendarMarker(c, tp));
-      tp._checking = false;
-      if (found){
-        tp._eventMissing = false;
-        // Read the just-written meeting doc back for the confirmed new
-        // date/time, rather than trusting tp.date/tp.time, which are only
-        // updated by the separate onSnapshot listener and may not have
-        // landed locally yet at this point.
-        let toLabel = prevDate ? (prevDate + (prevTime ? ' '+prevTime : '')) : '';
-        try{
-          const snap = await meetingDocRef(c.id, i).get();
-          const data = snap.exists ? snap.data() : null;
-          if (data && data.date) toLabel = data.date + (data.time ? ' '+data.time : '');
-        }catch(e){ /* history note falls back to previous label above */ }
-        tp.history.push({
-          type: 'rescheduled',
-          date: new Date().toISOString(),
-          from: prevDate ? (prevDate + (prevTime ? ' '+prevTime : '')) : 'unknown date',
-          to: toLabel,
-          reason: 'Original Google Calendar event was no longer available; a replacement meeting was scheduled.',
-          viaMissingEvent: true,
-        });
-        await saveRoster();
-      }
-      if (candidate(currentId)) renderHero(candidate(currentId));
-    });
-  }
-
   function wireHero(c, tp){
     const meta = ACT[tp.type];
     const pickTimeBtn = document.getElementById('pick-time-btn');
@@ -3610,7 +3542,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     // "Change date or time" and "Cancel meeting" both send HR to the real
     // Calendar event — the only place either action actually happens now.
     const changeTimeBtn = document.getElementById('change-time-btn');
-    if (changeTimeBtn) changeTimeBtn.addEventListener('click', ()=> tp._eventMissing ? handleReplaceMissingMeeting(c, tp) : handleOpenInCalendar(c, tp));
+    if (changeTimeBtn) changeTimeBtn.addEventListener('click', ()=> handleOpenInCalendar(c, tp));
     const cancelMeetingBtn = document.getElementById('cancel-meeting-btn');
     if (cancelMeetingBtn) cancelMeetingBtn.addEventListener('click', ()=> handleOpenInCalendar(c, tp));
     document.querySelectorAll('#outcome-seg .seg-btn').forEach(b=>{

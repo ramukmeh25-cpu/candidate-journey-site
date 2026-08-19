@@ -893,6 +893,42 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   </div>
 </div>
 
+<!-- =================== RECRUITER PROFILE SETUP (Step 9A) ===================
+     Shown once, right after a recruiter's FIRST successful Google sign-in
+     (no saved profile found for their uid yet). Name/email are pre-filled
+     from the Firebase/Google identity; phone + designation are collected
+     here. Reuses the same .portal-login-* shell/styling as the screens
+     above — no new CSS. -->
+<div class="portal-login-screen" id="recruiter-profile-setup-screen">
+  <div class="portal-login-card">
+    <div class="portal-login-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div class="portal-login-title">Complete your recruiter profile</div>
+    <div class="portal-login-sub">Just this once — confirm your details before opening the dashboard.</div>
+    <div class="field">
+      <label for="rps-name">Name</label>
+      <input type="text" id="rps-name" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rps-email">Email</label>
+      <input type="email" id="rps-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rps-phone">Phone number</label>
+      <input type="tel" id="rps-phone" placeholder="+1 555 123 4567" autocomplete="tel">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rps-designation">Designation</label>
+      <input type="text" id="rps-designation" placeholder="e.g. Senior Recruiter" autocomplete="organization-title">
+    </div>
+    <div class="portal-login-error" id="recruiter-profile-setup-error">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16v.01"/></svg>
+      <span id="recruiter-profile-setup-error-text">Please fill in your phone number and designation.</span>
+    </div>
+    <button class="btn btn-primary" id="recruiter-profile-setup-save" style="width:100%; justify-content:center; margin-top:14px;">Save profile</button>
+    <div class="portal-login-foot">You can update these details later if anything changes.</div>
+  </div>
+</div>
+
 <!-- =================== CANDIDATE PORTAL LOGIN GATE =================== -->
 <div class="portal-login-screen" id="portal-login-screen">
   <div class="portal-login-card">
@@ -1503,20 +1539,46 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       });
   }
 
+  // ---- STEP 9A: recruiter profile storage --------------------------------
+  // No persistent recruiter-profile storage existed yet (only the Firestore
+  // 'appdata' collection for roster/reminderSettings, whose rules already
+  // have a known "Missing or insufficient permissions" issue that is
+  // explicitly out of scope for this step). To avoid creating a new
+  // Firestore collection or touching security rules, the recruiter profile
+  // (phone + designation, plus the editable name/email) is kept in
+  // localStorage, keyed per Firebase uid. This is a deliberately small,
+  // client-side-only mechanism — it can be swapped for a Firestore
+  // collection later without changing getCurrentRecruiterInfo()'s shape.
+  function recruiterProfileKey(uid){ return `recruiterProfile_${uid}`; }
+  function loadRecruiterProfile(uid){
+    if (!uid) return null;
+    try{
+      const raw = localStorage.getItem(recruiterProfileKey(uid));
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ console.warn('loadRecruiterProfile failed:', e); return null; }
+  }
+  function saveRecruiterProfile(uid, profile){
+    if (!uid) return;
+    try{ localStorage.setItem(recruiterProfileKey(uid), JSON.stringify(profile)); }
+    catch(e){ console.warn('saveRecruiterProfile failed:', e); }
+  }
+
   // ---- STEP 7: recruiter-owner identity for new candidate records ----
   // Reuses the existing Firebase Auth identity (ensureFirebaseSignIn) —
   // no second auth system, no new prompts beyond what sign-in already
-  // requires. designation isn't available from Firebase Auth, so it's
-  // left null rather than invented.
+  // requires. STEP 9A: phone/designation now come from the saved
+  // recruiter-profile record (localStorage) when available, falling back
+  // to whatever Firebase Auth itself exposes (usually null for these).
   async function getCurrentRecruiterInfo(){
     const user = await ensureFirebaseSignIn();
     if (!user) return { name: null, email: null, uid: null, phone: null, designation: null };
+    const saved = loadRecruiterProfile(user.uid);
     return {
-      name: user.displayName || null,
-      email: user.email || null,
+      name: (saved && saved.name) || user.displayName || null,
+      email: (saved && saved.email) || user.email || null,
       uid: user.uid || null,
-      phone: user.phoneNumber || null,
-      designation: null
+      phone: (saved && saved.phone) || user.phoneNumber || null,
+      designation: (saved && saved.designation) || null
     };
   }
 
@@ -4489,6 +4551,57 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     }
   });
 
+  // ---- STEP 9A: first-time recruiter profile setup ----------------------
+  // Gate placed between Google sign-in and the dashboard: if no saved
+  // profile exists yet for this uid, show the setup screen (name/email
+  // pre-filled from the Google identity) instead of going straight to the
+  // dashboard. Once saved, the recruiter never sees this screen again on
+  // this browser/device (loadRecruiterProfile finds a record next time).
+  const profileSetupScreen = document.getElementById('recruiter-profile-setup-screen');
+  let profileSetupUser = null; // the Firebase user currently being onboarded
+
+  function showRecruiterProfileSetup(user){
+    profileSetupUser = user;
+    document.getElementById('rps-name').value = user.displayName || '';
+    document.getElementById('rps-email').value = user.email || '';
+    document.getElementById('rps-phone').value = '';
+    document.getElementById('rps-designation').value = '';
+    document.getElementById('recruiter-profile-setup-error').classList.remove('show');
+    profileSetupScreen.classList.add('open');
+  }
+
+  // Shared "show the dashboard for this signed-in, profile-complete
+  // recruiter" sequence — identical to what init()/onAuthStateChanged did
+  // before this step, just factored out so the profile-setup save button
+  // can reuse it too.
+  async function enterRecruiterDashboard(user){
+    await ensureRosterLoaded();
+    updateRecruiterProfileUI(user);
+    renderOverview();
+    renderNotifBell();
+  }
+
+  document.getElementById('recruiter-profile-setup-save').addEventListener('click', async ()=>{
+    const errEl = document.getElementById('recruiter-profile-setup-error');
+    const errText = document.getElementById('recruiter-profile-setup-error-text');
+    errEl.classList.remove('show');
+    const name = document.getElementById('rps-name').value.trim();
+    const email = document.getElementById('rps-email').value.trim();
+    const phone = document.getElementById('rps-phone').value.trim();
+    const designation = document.getElementById('rps-designation').value.trim();
+    if (!phone || !designation){
+      errText.textContent = 'Please fill in your phone number and designation.';
+      errEl.classList.add('show');
+      return;
+    }
+    const user = profileSetupUser;
+    if (!user) return; // shouldn't happen; screen is only opened with a user
+    saveRecruiterProfile(user.uid, { name: name || user.displayName || null, email: email || user.email || null, phone, designation });
+    profileSetupScreen.classList.remove('open');
+    profileSetupUser = null;
+    await enterRecruiterDashboard(user);
+  });
+
   /* ============================================================
      INIT
      ============================================================ */
@@ -4538,10 +4651,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     ]);
     document.body.classList.remove('app-loading');
     if (firstUser){
-      await ensureRosterLoaded();
-      updateRecruiterProfileUI(firstUser);
-      renderOverview();
-      renderNotifBell();
+      // STEP 9A: existing recruiter (profile already saved) goes straight
+      // to the dashboard, as before; a first-time recruiter (no saved
+      // profile for this uid) sees the profile setup screen instead.
+      if (loadRecruiterProfile(firstUser.uid)){
+        await enterRecruiterDashboard(firstUser);
+      } else {
+        showRecruiterProfileSetup(firstUser);
+      }
     } else {
       loginScreen.classList.add('open');
     }
@@ -4551,12 +4668,15 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     auth.onAuthStateChanged(async user=>{
       if (user){
         loginScreen.classList.remove('open');
-        await ensureRosterLoaded();
-        updateRecruiterProfileUI(user);
-        renderOverview();
-        renderNotifBell();
+        if (loadRecruiterProfile(user.uid)){
+          await enterRecruiterDashboard(user);
+        } else {
+          showRecruiterProfileSetup(user);
+        }
       } else {
         loginScreen.classList.add('open');
+        profileSetupScreen.classList.remove('open');
+        profileSetupUser = null;
       }
     });
   })();

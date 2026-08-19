@@ -2516,10 +2516,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     let reason, action, actionable;
 
     if (tp.attempts>=3){
-      reason = `We've tried ${tp.attempts} times and the candidate hasn't replied`;
+      reason = `${tp.attempts} attempts — candidate hasn't responded`;
       action = 'No Response'; actionable = true;
     } else if (tp.attempts>0){
-      reason = `Reached out ${tp.attempts} time${tp.attempts>1?'s':''} — no reply yet`;
+      reason = `${tp.attempts} attempt${tp.attempts>1?'s':''} — candidate hasn't responded`;
       action = 'No Response'; actionable = true;
     } else if (rescheduleCount>=1){
       reason = rescheduleCount>=2 ? `${label} has been moved ${rescheduleCount} times` : `${label} was moved to a new time`;

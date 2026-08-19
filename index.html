@@ -567,30 +567,52 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-link-seam{display:flex; align-items:center; justify-content:center; gap:6px; padding:7px 18px; background:var(--paper-sunk); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:9.5px; font-weight:700; font-family:var(--font-ui); color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em;}
 .jp-link-seam svg{width:11px; height:11px; color:var(--brand); flex-shrink:0;}
 .jp-card{padding:18px 18px 16px; text-align:center;}
-/* MODIFICATION 5: Journey Progress and Sentiment Analysis presented as two
-   equal, side-by-side insights (not gauge circles — see request "avoid
-   three large circular gauges" / "avoid decorative elements"), with
-   Confidence below as their derived result rather than a badge nested
-   inside the Journey Progress card. Reuses .jp-gauge-value/.jp-gauge-caption
-   (plain type styling, no longer wrapped in a circular gauge) and
-   .cjs-eyebrow/.cjs-badge-label/.cjs-progress-sub/.cjs-action so no new
-   type scale is introduced. */
+/* MODIFICATION 6B: Journey Progress and Sentiment Analysis as two compact
+   metric cards (icon + title + value + caption) instead of plain stacked
+   text, so each reads as its own distinct signal at a glance. Confidence
+   sits below as a single stronger, tone-filled bar — visually heavier than
+   either input above it — reflecting that it's the derived result of the
+   two, not a third gauge alongside them. */
 .jp-health-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); padding:16px 18px 0;}
-.jp-metrics-row{display:flex; padding:12px 18px 0;}
-.jp-metric{flex:1; min-width:0; text-align:center;}
-.jp-metric+.jp-metric{border-left:1px solid var(--line);}
+.jp-metrics-row{display:flex; gap:10px; padding:12px 18px 0;}
+.jp-metric-card{flex:1; min-width:0; text-align:center; background:var(--paper-sunk); border:1px solid var(--line); border-radius:var(--radius-sm); padding:13px 10px 11px;}
+.jp-metric-icon{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 7px; color:#fff; background:var(--ink-faint);}
+.jp-metric-icon svg{width:13px; height:13px;}
+.jp-metric-card.tone-brand .jp-metric-icon{background:var(--brand);}
+.jp-metric-card.tone-steel .jp-metric-icon{background:var(--steel);}
+.jp-metric-card.is-pending .jp-metric-icon{background:var(--ink-faint);}
+.jp-metric-title{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui);}
+.jp-metric-value{font-family:var(--font-ui); font-weight:800; font-size:22px; line-height:1.25; color:var(--ink); letter-spacing:-.01em;}
+.jp-metric-value span{font-size:11px; font-weight:600; color:var(--ink-faint);}
+.jp-metric-value.is-pending{color:var(--ink-faint);}
+.jp-metric-caption{font-size:10px; color:var(--ink-soft); font-weight:700; font-family:var(--font-ui);}
 .jp-metrics-sub{text-align:center; padding:0 18px;}
-.jp-gauge-value-pending{color:var(--ink-faint);}
-.jp-confidence-row{text-align:center; border-top:1px solid var(--line); margin:13px 18px 0; padding:13px 0 16px;}
-.jp-confidence-value{font-family:var(--font-ui); font-weight:800; font-size:18px; text-transform:uppercase; letter-spacing:.03em; margin-top:3px;}
-.jp-confidence-value.tone-sage{color:var(--sage);}
-.jp-confidence-value.tone-amber{color:var(--amber-ink);}
-.jp-confidence-value.tone-clay{color:var(--clay);}
-.jp-confidence-value.tone-steel{color:var(--steel);}
-.jp-confidence-value.tone-brand{color:var(--brand-dark);}
-.jp-confidence-value.tone-flat{color:var(--ink-soft);}
-.jp-confidence-caption{font-size:10.5px; color:var(--ink-faint); font-weight:600; margin-top:3px;}
-@media (max-width:400px){ .jp-metrics-row{flex-direction:column; gap:12px;} .jp-metric+.jp-metric{border-left:none; border-top:1px solid var(--line); padding-top:12px;} }
+.jp-confidence-row{display:flex; align-items:center; gap:11px; text-align:left; margin:13px 18px 0; padding:13px 15px; border-radius:var(--radius-sm);}
+.jp-confidence-row.tone-sage{background:var(--sage-pale);}
+.jp-confidence-row.tone-amber{background:var(--amber-pale);}
+.jp-confidence-row.tone-clay{background:var(--clay-pale);}
+.jp-confidence-row.tone-steel{background:var(--steel-pale);}
+.jp-confidence-row.tone-brand{background:var(--brand-pale);}
+.jp-confidence-row.tone-flat{background:var(--paper-sunk);}
+.jp-confidence-icon{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--paper-raised); box-shadow:var(--shadow-sm);}
+.jp-confidence-icon svg{width:17px; height:17px;}
+.jp-confidence-row.tone-sage .jp-confidence-icon{color:var(--sage);}
+.jp-confidence-row.tone-amber .jp-confidence-icon{color:var(--amber-ink);}
+.jp-confidence-row.tone-clay .jp-confidence-icon{color:var(--clay);}
+.jp-confidence-row.tone-steel .jp-confidence-icon{color:var(--steel);}
+.jp-confidence-row.tone-brand .jp-confidence-icon{color:var(--brand-dark);}
+.jp-confidence-row.tone-flat .jp-confidence-icon{color:var(--ink-soft);}
+.jp-confidence-body{min-width:0;}
+.jp-confidence-label{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; font-family:var(--font-ui); opacity:.75;}
+.jp-confidence-value{font-family:var(--font-ui); font-weight:800; font-size:19px; text-transform:uppercase; letter-spacing:.03em; margin-top:1px;}
+.jp-confidence-row.tone-sage .jp-confidence-label, .jp-confidence-row.tone-sage .jp-confidence-value{color:var(--sage);}
+.jp-confidence-row.tone-amber .jp-confidence-label, .jp-confidence-row.tone-amber .jp-confidence-value{color:var(--amber-ink);}
+.jp-confidence-row.tone-clay .jp-confidence-label, .jp-confidence-row.tone-clay .jp-confidence-value{color:var(--clay);}
+.jp-confidence-row.tone-steel .jp-confidence-label, .jp-confidence-row.tone-steel .jp-confidence-value{color:var(--steel);}
+.jp-confidence-row.tone-brand .jp-confidence-label, .jp-confidence-row.tone-brand .jp-confidence-value{color:var(--brand-dark);}
+.jp-confidence-row.tone-flat .jp-confidence-label, .jp-confidence-row.tone-flat .jp-confidence-value{color:var(--ink-soft);}
+.jp-confidence-caption{font-size:10.5px; color:var(--ink-soft); font-weight:600; margin-top:2px; opacity:.9;}
+@media (max-width:400px){ .jp-metrics-row{flex-direction:column;} }
 .cjs-eyebrow{font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); margin-bottom:2px;}
 .jp-gauge-wrap{position:relative; width:104px; height:104px; margin:8px auto 4px;}
 .jp-gauge-wrap svg{width:100%; height:100%; transform:rotate(-90deg);}
@@ -602,7 +624,6 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-gauge-caption{font-size:10px; color:var(--ink-soft); font-weight:700; margin-top:2px; font-family:var(--font-ui);}
 .cjs-progress-sub{font-size:10.5px; color:var(--ink-faint); margin:2px 0 12px; font-weight:500;}
 .jp-group .cjs-action{margin-left:18px; margin-right:18px;}
-.jp-group .sent-history{margin-left:18px; margin-right:18px; padding-bottom:16px;}
 .jp-card-secondary{border-top:1px dashed var(--line-strong) !important;}
 .jp-gauge-fill-pending{stroke:var(--ink-faint,#9a9a9a);}
 .jp-gauge-fill-sentiment{stroke:var(--steel);}
@@ -1728,7 +1749,15 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       if ((res.status === 401 || res.status === 403) && retry){
         gAccessToken = null;
         gTokenExpiresAt = 0;
-        await getAccessToken(true);
+        // Do NOT force-consent (prompt:'consent') here: this retry runs
+        // from the automatic post-focus reschedule poll, not from a click,
+        // so a forced interactive popup is not a trusted user gesture and
+        // gets silently blocked by the browser — the request (and the
+        // whole poll) then hangs forever, which is why a reschedule could
+        // sit there still showing the old date/time with no error. An
+        // unforced request lets GIS reuse the already-granted Calendar
+        // scope silently instead.
+        await getAccessToken();
         return getCalendarEventById(eventId, false);
       }
       if (!res.ok) { console.warn('Calendar event lookup failed:', res.status); return null; }
@@ -2561,15 +2590,17 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
         <div class="jp-health-label">Candidate health</div>
 
         <div class="jp-metrics-row">
-          <div class="jp-metric">
-            <div class="cjs-eyebrow">Journey progress</div>
-            <div class="jp-gauge-value">${pct}<span>%</span></div>
-            <div class="jp-gauge-caption">${c.currentIndex} of ${c.touchpoints.length} complete</div>
+          <div class="jp-metric-card tone-brand">
+            <div class="jp-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg></div>
+            <div class="jp-metric-title">Journey progress</div>
+            <div class="jp-metric-value">${pct}<span>%</span></div>
+            <div class="jp-metric-caption">${c.currentIndex} of ${c.touchpoints.length} complete</div>
           </div>
-          <div class="jp-metric">
-            <div class="cjs-eyebrow" data-tip="Candidate sentiment score, calculated from their submitted sentiment check-ins — separate from Journey Progress.">Sentiment analysis</div>
-            <div class="jp-gauge-value${sentimentScore==null ? ' jp-gauge-value-pending' : ''}">${sentimentScore==null ? '--' : sentimentScore}<span>%</span></div>
-            <div class="jp-gauge-caption">${sentimentScore==null ? 'Not yet scored' : 'Sentiment score'}</div>
+          <div class="jp-metric-card tone-steel${sentimentScore==null ? ' is-pending' : ''}">
+            <div class="jp-metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+            <div class="jp-metric-title" data-tip="Candidate sentiment score, calculated from their submitted sentiment check-ins — separate from Journey Progress.">Sentiment analysis</div>
+            <div class="jp-metric-value${sentimentScore==null ? ' is-pending' : ''}">${sentimentScore==null ? '--' : sentimentScore}<span>%</span></div>
+            <div class="jp-metric-caption">${sentimentScore==null ? 'Not yet scored' : 'Sentiment score'}</div>
           </div>
         </div>
 
@@ -2579,29 +2610,13 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           <span>${action.text}</span>
         </div>` : ''}
 
-        <div class="jp-confidence-row">
-          <div class="cjs-badge-label" data-tip="Indicates the likelihood of the candidate joining, derived from journey progress and sentiment together.">Confidence</div>
-          <div class="jp-confidence-value tone-${conf.tone}">${conf.label}</div>
-          <div class="jp-confidence-caption">Based on journey progress + sentiment</div>
-        </div>
-
-        <div class="sent-history">
-          <div class="sent-history-title">Sentiment history</div>
-          ${surveys.length ? `
-            ${surveys.length>5 ? `<div class="sent-history-more">+${surveys.length-5} earlier check-in${surveys.length-5===1?'':'s'}</div>` : ''}
-            ${surveys.slice(-5).map(s=>{
-              const dateLabel = s.week ? `Week ${s.week}` : fmtDate(s.submittedAt.slice(0,10));
-              const tone = (sentimentByLevel(s.level)||{}).tone || 'steel';
-              return `<div class="sent-history-row">
-                <span class="sent-history-emoji">${s.emoji}</span>
-                <span class="sent-history-info">
-                  <span class="sent-history-label">${s.label}</span>
-                  <span class="sent-history-date">${dateLabel}</span>
-                </span>
-                <span class="pill tone-${tone}">${s.level}/5</span>
-              </div>`;
-            }).join('')}
-          ` : `<div class="sent-history-empty">No sentiment check-ins yet.</div>`}
+        <div class="jp-confidence-row tone-${conf.tone}">
+          <div class="jp-confidence-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="jp-confidence-body">
+            <div class="jp-confidence-label" data-tip="Indicates the likelihood of the candidate joining, derived from journey progress and sentiment together.">Confidence</div>
+            <div class="jp-confidence-value">${conf.label}</div>
+            <div class="jp-confidence-caption">Based on journey progress + sentiment</div>
+          </div>
         </div>
 
         <div class="jtp-card">
@@ -3288,11 +3303,6 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           </div>
 
           <div class="field-block" id="block-completed">
-            ${meta.isMeeting ? `<div class="field"><label>Contact method</label>
-              <div class="contact-radios" id="f-contact">
-                <div class="contact-fixed" data-tip="Set automatically for this touchpoint type — not selectable.">${meta.contactMethod}</div>
-              </div>
-            </div>` : ''}
             <div class="field"><label for="f-comments">Comments</label><textarea id="f-comments" rows="2" placeholder="${meta.isMeeting?'e.g. Candidate understands onboarding, no concerns raised.':'e.g. Newsletter sent, no issues.'}"></textarea></div>
             ${(tp.type==='business'||tp.type==='mock') ? `<div class="field remarks-block">
               <label for="f-remarks">Post-connect remarks <span class="field-optional">(handoff notes for the onboarding team)</span></label>
@@ -3338,6 +3348,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           <div><div class="hero-fact-label"${meta.isMeeting && !isMeetingScheduled ? ' data-tip="A system-suggested date — this becomes the actual meeting date once you schedule it below."' : ''}>${!meta.isMeeting ? 'Send date' : (isMeetingScheduled ? 'Meeting date' : 'Suggested date')}</div><div class="hero-fact-value">${fmtDate(tp.date)}</div></div>
           ${isMeetingScheduled ? `<div><div class="hero-fact-label">Meeting time</div><div class="hero-fact-value">${tp.time}</div></div>` : ''}
           <div><div class="hero-fact-label">Owner</div><div class="hero-fact-value">You</div></div>
+          ${meta.isMeeting ? `<div><div class="hero-fact-label">Contact</div><div class="hero-fact-value">${meta.contactMethod}</div></div>` : ''}
           ${tp.attempts>0 ? `<div><div class="hero-fact-label">Attempts</div><div class="hero-fact-value">${tp.attempts} of 3</div></div>` : ''}
         </div>` : ''}
         ${meetRowHtml}

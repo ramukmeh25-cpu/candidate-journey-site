@@ -878,13 +878,36 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   <button class="btn btn-primary btn-sm" id="preview-exit-btn">Back to Recruiter View</button>
 </div>
 
-<!-- =================== RECRUITER LOGIN GATE (Step 9) =================== -->
+<!-- =================== RECRUITER LOGIN / FIRST-TIME ONBOARDING (Step 9B) ===
+     STEP 9B: this screen now doubles as the first-time onboarding form —
+     recruiter details are entered here, BEFORE Google auth, so the
+     dashboard is never reachable ahead of profile completion. For a
+     returning recruiter with an existing cached Firebase session AND a
+     saved recruiterProfile_<uid>, init() skips this screen entirely and
+     goes straight to the dashboard (see init()/auth routing below); this
+     screen only appears when there's no such fast-path. -->
 <div class="portal-login-screen" id="recruiter-login-screen">
   <div class="portal-login-card">
     <div class="portal-login-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
     <div class="portal-login-title">Recruiter sign-in</div>
-    <div class="portal-login-sub">Sign in with your Google account to open the Candidate Journey dashboard.</div>
-    <button class="btn btn-primary" id="recruiter-login-btn" style="width:100%; justify-content:center;">Continue with Google</button>
+    <div class="portal-login-sub">First time here? Enter your details, then continue with Google. Returning recruiters can skip straight to Google — we'll use your saved profile.</div>
+    <div class="field">
+      <label for="rl-name">Name</label>
+      <input type="text" id="rl-name" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rl-email">Email</label>
+      <input type="email" id="rl-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rl-phone">Phone number</label>
+      <input type="tel" id="rl-phone" placeholder="+1 555 123 4567" autocomplete="tel">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label for="rl-designation">Designation</label>
+      <input type="text" id="rl-designation" placeholder="e.g. Senior Recruiter" autocomplete="organization-title">
+    </div>
+    <button class="btn btn-primary" id="recruiter-login-btn" style="width:100%; justify-content:center; margin-top:14px;">Continue with Google</button>
     <div class="portal-login-error" id="recruiter-login-error">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16v.01"/></svg>
       <span id="recruiter-login-error-text">Sign-in failed. Please try again.</span>
@@ -893,12 +916,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   </div>
 </div>
 
-<!-- =================== RECRUITER PROFILE SETUP (Step 9A) ===================
-     Shown once, right after a recruiter's FIRST successful Google sign-in
-     (no saved profile found for their uid yet). Name/email are pre-filled
-     from the Firebase/Google identity; phone + designation are collected
-     here. Reuses the same .portal-login-* shell/styling as the screens
-     above — no new CSS. -->
+<!-- =================== RECRUITER PROFILE SETUP (fallback) ===================
+     STEP 9B: with details now collected up-front on the login screen, this
+     screen is only a FALLBACK for the edge case where a recruiter already
+     has a live Firebase session (so we know their uid) but no saved
+     recruiterProfile_<uid> yet — e.g. localStorage was cleared on this
+     device. Firebase/Google identity pre-fills name/email; phone +
+     designation are collected here. Reuses the same .portal-login-*
+     shell/styling as the screen above — no new CSS. -->
 <div class="portal-login-screen" id="recruiter-profile-setup-screen">
   <div class="portal-login-card">
     <div class="portal-login-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
@@ -4535,6 +4560,13 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   // opaque origin) — surface that plainly instead of the button silently
   // doing nothing. When served over http/https (localhost or Firebase
   // Hosting), this check is skipped and sign-in proceeds as before.
+  // STEP 9B: recruiter details (name/email/phone/designation) are now
+  // collected on THIS screen, before Google auth — required for a
+  // first-time recruiter, since the dashboard must never be reachable
+  // ahead of profile completion. The entered values are captured into
+  // local consts up front and held in memory (not written to storage)
+  // until Google authentication succeeds and we have a uid to key on —
+  // per the "temporarily retain the entered form values" requirement.
   document.getElementById('recruiter-login-btn').addEventListener('click', async ()=>{
     const errEl = document.getElementById('recruiter-login-error');
     const errText = document.getElementById('recruiter-login-error-text');
@@ -4544,33 +4576,48 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       errEl.classList.add('show');
       return;
     }
+    // Retain the entered details before auth — phone + designation are
+    // required so a first-time recruiter can't skip straight through.
+    const enteredName = document.getElementById('rl-name').value.trim();
+    const enteredEmail = document.getElementById('rl-email').value.trim();
+    const enteredPhone = document.getElementById('rl-phone').value.trim();
+    const enteredDesignation = document.getElementById('rl-designation').value.trim();
+    if (!enteredPhone || !enteredDesignation){
+      errText.textContent = 'Please fill in your phone number and designation before continuing.';
+      errEl.classList.add('show');
+      return;
+    }
     const user = await ensureFirebaseSignIn();
     if (!user){
       errText.textContent = 'Sign-in failed or was cancelled. Please try again.';
       errEl.classList.add('show');
       return;
     }
-    // STEP 9A BUG FIX: don't just wait for auth.onAuthStateChanged to pick
-    // this sign-in up — route through the exact same profile-setup gate
-    // right here, deterministically, for the sign-in this click just
-    // produced. (The onAuthStateChanged listener in init() still runs too,
-    // for page-refresh/already-signed-in cases — both paths call the same
-    // loadRecruiterProfile()/showRecruiterProfileSetup()/
-    // enterRecruiterDashboard() functions, so re-running this is harmless.)
     document.getElementById('recruiter-login-screen').classList.remove('open');
+    // STEP 9B: if a profile already exists for this uid (a returning
+    // recruiter who happened to reach this form — e.g. signed out and
+    // back in), that saved profile wins and the just-typed values are
+    // discarded; otherwise associate the retained form values with the
+    // now-known Firebase uid, using the authenticated Google email as the
+    // verified identity/email when one was returned.
     if (loadRecruiterProfile(user.uid)){
       await enterRecruiterDashboard(user);
     } else {
-      showRecruiterProfileSetup(user);
+      saveRecruiterProfile(user.uid, {
+        name: enteredName || user.displayName || null,
+        email: user.email || enteredEmail || null,
+        phone: enteredPhone,
+        designation: enteredDesignation
+      });
+      await enterRecruiterDashboard(user);
     }
   });
 
-  // ---- STEP 9A: first-time recruiter profile setup ----------------------
-  // Gate placed between Google sign-in and the dashboard: if no saved
-  // profile exists yet for this uid, show the setup screen (name/email
-  // pre-filled from the Google identity) instead of going straight to the
-  // dashboard. Once saved, the recruiter never sees this screen again on
-  // this browser/device (loadRecruiterProfile finds a record next time).
+  // ---- STEP 9B: post-auth profile-setup fallback -------------------------
+  // Only reached when a recruiter already has a live Firebase session (uid
+  // known) but no saved recruiterProfile_<uid> yet on this device — the
+  // normal first-time path now collects details on the login screen
+  // itself, before auth (see the recruiter-login-btn handler above).
   const profileSetupScreen = document.getElementById('recruiter-profile-setup-screen');
   let profileSetupUser = null; // the Firebase user currently being onboarded
 
@@ -4665,15 +4712,24 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     ]);
     document.body.classList.remove('app-loading');
     if (firstUser){
-      // STEP 9A: existing recruiter (profile already saved) goes straight
-      // to the dashboard, as before; a first-time recruiter (no saved
-      // profile for this uid) sees the profile setup screen instead.
+      // STEP 9B: existing recruiter (profile already saved for this uid)
+      // goes straight to the dashboard, as before; a recruiter with a live
+      // Firebase session but no saved profile (localStorage cleared on
+      // this device) hits the post-auth fallback screen instead of the
+      // dashboard.
       if (loadRecruiterProfile(firstUser.uid)){
         await enterRecruiterDashboard(firstUser);
       } else {
         showRecruiterProfileSetup(firstUser);
       }
     } else {
+      // STEP 9B: not signed in — show the login screen, which now doubles
+      // as the first-time onboarding form. Clear any stale field values
+      // (e.g. left over from a previous sign-out) before it's shown.
+      document.getElementById('rl-name').value = '';
+      document.getElementById('rl-email').value = '';
+      document.getElementById('rl-phone').value = '';
+      document.getElementById('rl-designation').value = '';
       loginScreen.classList.add('open');
     }
 
@@ -4688,6 +4744,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           showRecruiterProfileSetup(user);
         }
       } else {
+        document.getElementById('rl-name').value = '';
+        document.getElementById('rl-email').value = '';
+        document.getElementById('rl-phone').value = '';
+        document.getElementById('rl-designation').value = '';
         loginScreen.classList.add('open');
         profileSetupScreen.classList.remove('open');
         profileSetupUser = null;

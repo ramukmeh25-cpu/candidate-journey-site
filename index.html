@@ -2890,28 +2890,27 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     opts = opts || {};
     const tp = currentTp(c);
     const state = journeyState(c);
-    let reasonLine = '';
+    // ONE reason line — the same reason/action logic as before, just
+    // shown once as plain text instead of being echoed across a separate
+    // no-response badge, an action chip, and this line. The tab itself
+    // (Needs Action / Joining This Week / Closed) already tells the
+    // recruiter the broad "why"; this line gives the specific one.
+    let reasonText = '', isOutcome = false;
     if (c.closed){
-      reasonLine = `<div class="roster-reason outcome">${c.closureOutcome}</div>`;
+      reasonText = c.closureOutcome; isOutcome = true;
     } else if (opts.reason){
-      reasonLine = `<div class="roster-reason"><span>${opts.reason}</span><span class="roster-action ${opts.action==='No Response'?'tone-clay':''}">${ACTION_ARROW}${opts.action}</span></div>`;
+      reasonText = opts.reason;
     } else {
       const insight = getTaskInsight(c);
       if (insight && insight.reason){
-        reasonLine = `<div class="roster-reason"><span>${insight.reason}</span><span class="roster-action ${insight.action==='No Response'?'tone-clay':''}">${ACTION_ARROW}${insight.action}</span></div>`;
+        reasonText = insight.reason;
       } else {
         const nba = nextBestAction(c);
-        reasonLine = nba
-          ? `<div class="roster-reason"><span>${nba.text}</span></div>`
-          : `<div class="roster-reason outcome">Journey complete — ready to close</div>`;
+        if (nba){ reasonText = nba.text; }
+        else { reasonText = 'Journey complete — ready to close'; isOutcome = true; }
       }
     }
-    const cd = joinCountdown(c);
-    // No-Response count is tracked as its own always-visible badge on the
-    // roster row (not just inside the Needs Action queue), so a recruiter
-    // scanning Active Journeys can spot who's gone silent at a glance.
-    const noRespBadge = (!c.closed && tp && tp.attempts>0)
-      ? `<span class="mono no-resp-badge">No Response ×${tp.attempts}</span>` : '';
+    const reasonLine = `<div class="roster-reason${isOutcome ? ' outcome' : ''}"><span>${reasonText}</span></div>`;
     return `<div class="roster-row ${opts.urgency||''}" data-id="${c.id}">
       <div class="roster-stamp">${initials(c.name)}</div>
       <div class="roster-main">
@@ -2920,13 +2919,11 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
           <span>${c.role}</span>
           <span class="mono rf-notice">${c.noticeDays}-day notice</span>
           <span class="mono rf-join">Joins ${fmtDate(c.joinDate)}</span>
-          <span class="deadline-badge">${cd.text}</span>
-          ${noRespBadge}
         </div>
         ${reasonLine}
       </div>
       <div class="roster-tp">
-        ${tp ? `Week ${tp.week} · ${ACT[tp.type].label}<br><span class="mono">${fmtDate(tp.date)}</span>` : 'Journey complete'}
+        ${tp ? `${ACT[tp.type].label}<br><span class="mono">${fmtDateShort(tp.date)} · Current</span>` : 'Journey complete'}
       </div>
       <span class="pill tone-${state.tone}">${state.label}</span>
     </div>`;

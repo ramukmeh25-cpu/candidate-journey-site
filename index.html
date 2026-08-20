@@ -576,8 +576,13 @@ h1,h2,h3{margin:0; font-family:var(--font-display); font-weight:600; letter-spac
 .jp-health-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint); font-weight:700; font-family:var(--font-ui); padding:16px 18px 0;}
 .jp-metrics-row{display:flex; gap:10px; padding:12px 18px 0;}
 .jp-metric-card{flex:1; min-width:0; text-align:center; background:var(--paper-sunk); border:1px solid var(--line); border-radius:var(--radius-sm); padding:13px 10px 11px;}
-.jp-metric-icon{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 7px; color:#fff; background:var(--ink-faint);}
-.jp-metric-icon svg{width:13px; height:13px;}
+.jp-metric-icon{width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 7px; color:#fff; background:var(--ink-faint);
+  animation:jp-icon-in .45s cubic-bezier(.34,1.4,.64,1) both;}
+.jp-metric-icon svg{width:15px; height:15px;}
+@keyframes jp-icon-in{0%{opacity:0; transform:scale(.75);} 100%{opacity:1; transform:scale(1);}}
+@media (prefers-reduced-motion: reduce){
+  .jp-metric-icon{animation:none;}
+}
 .jp-metric-card.tone-brand .jp-metric-icon{background:var(--brand);}
 .jp-metric-card.tone-steel .jp-metric-icon{background:var(--steel);}
 .jp-metric-card.is-pending .jp-metric-icon{background:var(--ink-faint);}
@@ -921,11 +926,17 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
 /* 2. Sentiment check-in */
 .pv-sentiment-q{font-size:13.5px; font-weight:700; font-family:var(--font-ui); margin-bottom:13px;}
 .pv-sentiment-grid{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
-.pv-sentiment-opt{display:flex; align-items:center; gap:11px; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px; cursor:pointer; transition:all .12s ease; background:var(--paper); text-align:left; width:100%;}
+.pv-sentiment-opt{display:flex; align-items:center; gap:11px; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px; cursor:pointer; transition:border-color .12s ease, background .12s ease, box-shadow .12s ease; background:var(--paper); text-align:left; width:100%; touch-action:manipulation; -webkit-tap-highlight-color:transparent;}
 .pv-sentiment-opt:hover{border-color:var(--brand); background:var(--brand-pale);}
 .pv-sentiment-opt.selected{border-color:var(--brand); background:var(--brand-pale); box-shadow:0 0 0 2px var(--brand-pale);}
 .pv-sentiment-emoji{font-size:21px; flex:none;}
 .pv-sentiment-label{font-size:12.5px; font-weight:700; font-family:var(--font-ui);}
+/* Modification 9A: joining-readiness progress indicator */
+.pv-jr-intro{font-size:13.5px; font-weight:700; font-family:var(--font-ui); margin-bottom:10px;}
+.pv-jr-progress{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+.pv-jr-progress-text{font-size:11px; font-weight:700; font-family:var(--font-ui); color:var(--ink-soft); flex:none;}
+.pv-jr-progress-bar{flex:1; height:5px; border-radius:3px; background:var(--line); overflow:hidden;}
+.pv-jr-progress-fill{height:100%; background:var(--brand); border-radius:3px; transition:width .2s ease;}
 .pv-comment-label{font-size:11.5px; font-weight:700; font-family:var(--font-ui); color:var(--ink-soft); margin-bottom:6px; display:block;}
 #pv-comment{width:100%; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; font-family:var(--font-body); font-size:13px; background:var(--paper); color:var(--ink); resize:vertical; margin-bottom:12px; box-sizing:border-box;}
 .pv-sentiment-thanks{display:flex; align-items:center; gap:10px; background:var(--sage-pale); color:var(--sage); border-radius:var(--radius-sm); padding:12px 14px; font-size:12.5px; font-weight:700;}
@@ -1416,11 +1427,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       <div class="pv-section emphasis" id="pv-sentiment-section">
         <div class="pv-section-head"><span class="pv-section-num">2</span><span class="pv-section-title">How are you feeling?</span><span class="pv-section-star" data-tip="This helps your recruiter support you better">⭐</span></div>
         <div id="pv-sentiment-card">
-          <div class="pv-sentiment-q">How confident are you about joining?</div>
-          <div class="pv-sentiment-grid" id="pv-sentiment-grid"></div>
-          <label class="pv-comment-label" for="pv-comment">Tell us if you need any help. (optional)</label>
-          <textarea id="pv-comment" rows="3" placeholder="Anything on your mind..."></textarea>
-          <button class="btn btn-primary btn-sm" id="pv-survey-submit" disabled>Submit</button>
+          <div class="pv-jr-intro">How are you feeling about joining?</div>
+          <div class="pv-jr-progress">
+            <span class="pv-jr-progress-text" id="pv-jr-progress-text">1 of 4</span>
+            <div class="pv-jr-progress-bar"><div class="pv-jr-progress-fill" id="pv-jr-progress-fill" style="width:25%;"></div></div>
+          </div>
+          <div class="pv-sentiment-q" id="pv-jr-question"></div>
+          <div class="pv-sentiment-grid" id="pv-jr-grid"></div>
+          <button class="btn btn-primary btn-sm" id="pv-jr-next" disabled>Next</button>
         </div>
         <div id="pv-sentiment-thanks" class="pv-sentiment-thanks" style="display:none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M20 6L9 17l-5-5"/></svg>
@@ -2083,6 +2097,35 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     {level:1, emoji:'😟', label:'Looking for other opportunities',tone:'clay',  tip:'You\'re actively considering other options.'},
   ];
   function sentimentByLevel(level){ return SENTIMENT_LEVELS.find(s=>s.level===level); }
+
+  // ---- Modification 9A: HR joining-readiness check-in (4 questions) ----
+  // A separate, distinguishable c.surveys entry (type: 'joining_readiness').
+  // Coexists with the older per-stage `level` entries above — see the
+  // backward-compatibility guards in migrateCandidate/sentimentAnalysisScore/
+  // renderPortalActivityCard/renderPortal that keep the two shapes apart.
+  const JOINING_READINESS_QUESTIONS = [
+    {key:'lwdAccepted', q:'Has your current employer formally accepted your resignation and confirmed your Last Working Day (LWD)?', options:[
+      {v:'yes', t:'Yes'},
+      {v:'not_yet', t:'Not yet'},
+      {v:'not_sure', t:"I'm not sure"},
+    ]},
+    {key:'ktProgress', q:'How is the knowledge transfer (KT) process progressing in your current team?', options:[
+      {v:'on_track', t:'On track'},
+      {v:'minor_challenges', t:'Some progress / minor challenges'},
+      {v:'delayed', t:'Delayed / significant challenges'},
+    ]},
+    {key:'transitionConfidence', q:'On a scale of 1–5, how confident are you that your transition out of your current company will happen without delays?', options:[
+      {v:1, t:'1'}, {v:2, t:'2'}, {v:3, t:'3'}, {v:4, t:'4'}, {v:5, t:'5'},
+    ]},
+    {key:'joiningExcitement', q:'How excited are you to join Straive?', options:[
+      {v:'very_excited', t:'Very excited'},
+      {v:'excited', t:'Excited'},
+      {v:'neutral', t:'Neutral'},
+      {v:'not_very_excited', t:'Not very excited'},
+      {v:'not_excited', t:'Not excited'},
+    ]},
+  ];
+  function hasJoiningReadinessCheckin(c){ return (c.surveys||[]).some(s=>s && s.type==='joining_readiness'); }
   function nextSentimentCheckin(c){
     const answeredStages = new Set((c.surveys||[]).map(s=>s.stage));
     const stage = c.currentIndex;
@@ -2360,7 +2403,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     // load — that was the actual bug behind the sentiment score not
     // reflecting a real answer.
     if (!Array.isArray(c.surveys)) c.surveys = [];
-    else c.surveys = c.surveys.filter(s => s && s.level !== undefined);
+    // Modification 9A: joining-readiness entries (type: 'joining_readiness')
+    // don't carry a numeric `level`, so they must be kept alongside the
+    // older level-based entries rather than dropped by this guard.
+    else c.surveys = c.surveys.filter(s => s && (s.level !== undefined || s.type === 'joining_readiness'));
     if (!c.portalEvents) c.portalEvents = [];
     if (c.portalInvitedAt === undefined) c.portalInvitedAt = null;
     if (!c.recruitmentFeedback || typeof c.recruitmentFeedback !== 'object') c.recruitmentFeedback = {};
@@ -2487,6 +2533,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     risk:     {label:'Low',    tone:'clay'},
     highrisk: {label:'Low',    tone:'clay'},
   };
+  // Modification 9C: thresholds for the combined
+  // (Journey Progress + Sentiment) / 2 confidence score.
+  const CONFIDENCE_THRESHOLDS = { high:75, medium:50 }; // >=high -> High, >=medium -> Medium, else Low
+  function confidenceFromCombinedScore(combinedScore){
+    if (combinedScore >= CONFIDENCE_THRESHOLDS.high) return {label:'High', tone:'sage'};
+    if (combinedScore >= CONFIDENCE_THRESHOLDS.medium) return {label:'Medium', tone:'amber'};
+    return {label:'Low', tone:'clay'};
+  }
   // Three distinct, meaningful icons for the three Confidence values —
   // reusing the same feather-style outline icon system already used
   // everywhere else in the app (Medium reuses the exact alert-circle glyph
@@ -2556,6 +2610,21 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
 
   function computeConfidence(c){
     const tier = engagementTier(c);
+    // Modification 9C: once the candidate has a valid Sentiment /
+    // Joining Readiness score, Confidence becomes the combined
+    // (Journey Progress + Sentiment) / 2 score, per the "Based on
+    // journey progress + sentiment analysis" caption already in the UI.
+    const sentimentScore = sentimentAnalysisScore(c);
+    if (sentimentScore !== null){
+      // Existing high-risk safety net is preserved: three logged
+      // no-response attempts (the escalation point the app already
+      // treats as "likely to drop") still forces Low, even if the
+      // combined score alone would read higher.
+      if (tier === 'highrisk') return {label:'Low', tone:'clay'};
+      const combinedScore = (engagementPct(c) + sentimentScore) / 2;
+      return confidenceFromCombinedScore(combinedScore);
+    }
+    // Fallback — unchanged — used until a valid sentiment score exists.
     // A candidate still on their very first touchpoint, with nothing
     // completed and no friction yet, hasn't proven anything either way —
     // reads as Medium rather than inheriting the On Track tier's High.
@@ -2564,6 +2633,44 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     // as a touchpoint actually completes (currentIndex advances).
     if (tier==='ontrack' && c.currentIndex===0) return {label:'Medium', tone:'amber'};
     return CONFIDENCE_META[tier];
+  }
+
+  // ---- Modification 9B: Joining Readiness Sentiment score ----
+  // Proposed product scoring model for the 4-question joining_readiness
+  // check-in (Modification 9A). Weights kept in one object so they're
+  // easy to find/tune later; HR has not signed off on an official formula.
+  const JOINING_READINESS_WEIGHTS = {
+    lwdAccepted: 0.30, ktProgress: 0.25, transitionConfidence: 0.30, joiningExcitement: 0.15
+  };
+  // Maps use the short `v` codes actually stored in answers (see
+  // JOINING_READINESS_QUESTIONS options above), not the display text.
+  const JR_LWD_SCORE = { yes:100, not_yet:50, not_sure:25 };
+  const JR_KT_SCORE = { on_track:100, minor_challenges:60, delayed:20 };
+  const JR_CONFIDENCE_SCORE = { 1:20, 2:40, 3:60, 4:80, 5:100 };
+  const JR_EXCITEMENT_SCORE = { very_excited:100, excited:80, neutral:60, not_very_excited:40, not_excited:20 };
+
+  // Returns the latest completed joining_readiness check-in, or null.
+  function latestJoiningReadinessCheckin(c){
+    const list = (c.surveys || []).filter(s => s && s.type === 'joining_readiness');
+    return list.length ? list[list.length - 1] : null;
+  }
+
+  // Converts the latest joining_readiness check-in into a 0–100 score.
+  // Returns null (never an invented value) if no check-in exists, or if
+  // any answer is missing/unrecognized — per spec, does not average
+  // multiple joining_readiness check-ins.
+  function joiningReadinessScore(c){
+    const entry = latestJoiningReadinessCheckin(c);
+    if (!entry || !entry.answers) return null;
+    const a = entry.answers;
+    const lwd = JR_LWD_SCORE[a.lwdAccepted];
+    const kt = JR_KT_SCORE[a.ktProgress];
+    const conf = JR_CONFIDENCE_SCORE[a.transitionConfidence];
+    const excitement = JR_EXCITEMENT_SCORE[a.joiningExcitement];
+    if (lwd===undefined || kt===undefined || conf===undefined || excitement===undefined) return null;
+    const w = JOINING_READINESS_WEIGHTS;
+    const score = (lwd*w.lwdAccepted) + (kt*w.ktProgress) + (conf*w.transitionConfidence) + (excitement*w.joiningExcitement);
+    return Math.round(score);
   }
 
   // Sentiment Analysis — deliberately separate from Journey Progress and
@@ -2577,7 +2684,14 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
   // scale where level 1 (Looking for other opportunities) = 0% and
   // level 5 (Very Confident) = 100%.
   function sentimentAnalysisScore(c){
-    const surveys = c.surveys || [];
+    // Modification 9B: a completed joining_readiness check-in is the
+    // newer, structured signal and takes priority when present.
+    const jrScore = joiningReadinessScore(c);
+    if (jrScore !== null) return jrScore;
+    // Modification 9A compatibility guard: joining_readiness entries carry
+    // no numeric `level` and are excluded here so they don't skew/NaN this
+    // average. Scoring model itself is unchanged.
+    const surveys = (c.surveys || []).filter(s => s && s.level !== undefined);
     if (!surveys.length) return null;
     const avgLevel = surveys.reduce((sum,s)=>sum+s.level, 0) / surveys.length;
     return Math.round(((avgLevel-1)/4) * 100);
@@ -2873,8 +2987,12 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     const pct = checklistPct(c);
     const list = c.checklist || [];
     const doneCt = list.filter(i=>i.done).length;
-    const surveys = (c.surveys||[]).slice(-3).reverse();
-    const hasLowConf = (c.surveys||[]).some(s=>isLowConfidence(s.level));
+    // Modification 9A compatibility guard: this card renders s.emoji/s.label,
+    // which only exist on the older level-based entries — joining_readiness
+    // entries are excluded here so they don't render as blank rows. Their
+    // own display is out of scope for 9A.
+    const surveys = (c.surveys||[]).filter(s=>s && s.level !== undefined).slice(-3).reverse();
+    const hasLowConf = (c.surveys||[]).some(s=>s && s.level !== undefined && isLowConfidence(s.level));
     return `
       <div class="jtp-card">
         <div class="jtp-label-row">
@@ -4234,43 +4352,59 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       }
     }
 
-    /* ---------------- 2. Candidate Sentiment ---------------- */
-    const checkin = nextSentimentCheckin(c);
+    /* ---------------- 2. Candidate Sentiment: joining-readiness check-in (Modification 9A) ---------------- */
     const sentimentCard = document.getElementById('pv-sentiment-card');
     const thanks = document.getElementById('pv-sentiment-thanks');
-    let selectedLevel = 0;
-    if (checkin && !c.closed){
+    if (!hasJoiningReadinessCheckin(c) && !c.closed){
       sentimentCard.style.display = 'block';
       thanks.style.display = 'none';
-      document.getElementById('pv-comment').value = '';
-      const grid = document.getElementById('pv-sentiment-grid');
-      grid.innerHTML = SENTIMENT_LEVELS.map(s=>`
-        <button type="button" class="pv-sentiment-opt" data-l="${s.level}" data-tip="${s.tip}">
-          <span class="pv-sentiment-emoji">${s.emoji}</span>
-          <span class="pv-sentiment-label">${s.label}</span>
-        </button>`).join('');
-      const submitBtn = document.getElementById('pv-survey-submit');
-      submitBtn.disabled = true;
-      grid.querySelectorAll('.pv-sentiment-opt').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          selectedLevel = parseInt(btn.getAttribute('data-l'),10);
-          grid.querySelectorAll('.pv-sentiment-opt').forEach(b=>b.classList.toggle('selected', b===btn));
-          submitBtn.disabled = false;
+      let jrIndex = 0;
+      const jrAnswers = {};
+      const jrProgressText = document.getElementById('pv-jr-progress-text');
+      const jrProgressFill = document.getElementById('pv-jr-progress-fill');
+      const jrQuestionEl = document.getElementById('pv-jr-question');
+      const jrGrid = document.getElementById('pv-jr-grid');
+      const jrNextBtn = document.getElementById('pv-jr-next');
+      function renderJrStep(){
+        const total = JOINING_READINESS_QUESTIONS.length;
+        const step = JOINING_READINESS_QUESTIONS[jrIndex];
+        jrProgressText.textContent = `${jrIndex+1} of ${total}`;
+        jrProgressFill.style.width = `${((jrIndex+1)/total)*100}%`;
+        jrQuestionEl.textContent = step.q;
+        jrGrid.innerHTML = step.options.map(o=>`
+          <button type="button" class="pv-sentiment-opt" data-v="${o.v}">
+            <span class="pv-sentiment-label">${o.t}</span>
+          </button>`).join('');
+        jrNextBtn.textContent = jrIndex === total-1 ? 'Submit check-in' : 'Next';
+        jrNextBtn.disabled = jrAnswers[step.key] === undefined;
+        jrGrid.querySelectorAll('.pv-sentiment-opt').forEach(btn=>{
+          if (String(jrAnswers[step.key]) === btn.getAttribute('data-v')) btn.classList.add('selected');
+          // Selection is immediate: local state + UI only, no Firestore write
+          // per answer (reuses the responsive tap behavior from 8A).
+          btn.addEventListener('click', ()=>{
+            const raw = btn.getAttribute('data-v');
+            jrAnswers[step.key] = step.key === 'transitionConfidence' ? parseInt(raw,10) : raw;
+            jrGrid.querySelectorAll('.pv-sentiment-opt').forEach(b=>b.classList.toggle('selected', b===btn));
+            jrNextBtn.disabled = false;
+          });
         });
-      });
-      submitBtn.onclick = async ()=>{
-        if (!selectedLevel) return;
-        const s = sentimentByLevel(selectedLevel);
-        const comment = document.getElementById('pv-comment').value.trim();
-        const entry = {stage:checkin.stage, week:checkin.week, level:selectedLevel, emoji:s.emoji, label:s.label, comment, submittedAt:new Date().toISOString()};
+      }
+      jrNextBtn.onclick = async ()=>{
+        const step = JOINING_READINESS_QUESTIONS[jrIndex];
+        if (jrAnswers[step.key] === undefined) return;
+        if (jrIndex < JOINING_READINESS_QUESTIONS.length-1){
+          jrIndex++;
+          renderJrStep();
+          return;
+        }
+        const entry = {type:'joining_readiness', submittedAt:new Date().toISOString(), answers:{...jrAnswers}};
         c.surveys = c.surveys || [];
         c.surveys.push(entry);
-        // #17: low-confidence responses surface straight to the recruiter
-        if (isLowConfidence(selectedLevel)) pushPortalEvent(c, 'survey_negative', `Sentiment check-in: "${s.label}"${comment ? ` — "${comment}"` : ''}`);
         await saveRoster();
-        toast('Thanks — feedback sent!');
+        toast('Thanks — check-in submitted!');
         renderPortal(id);
       };
+      renderJrStep();
     } else {
       sentimentCard.style.display = 'none';
       thanks.style.display = c.closed ? 'none' : 'flex';
@@ -4336,7 +4470,10 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
 
     /* ---------------- 5. Candidate Feedback History ---------------- */
     const timeline = document.getElementById('pv-timeline');
-    const surveys = c.surveys || [];
+    // Modification 9A compatibility guard: this timeline renders s.emoji/
+    // s.label, which only exist on the older level-based entries —
+    // joining_readiness entries are excluded so they don't render blank.
+    const surveys = (c.surveys || []).filter(s => s && s.level !== undefined);
     if (surveys.length){
       timeline.innerHTML = surveys.map(s=>`
         <div class="pv-timeline-item">

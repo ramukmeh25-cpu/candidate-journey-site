@@ -2635,6 +2635,24 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     return CONFIDENCE_META[tier];
   }
 
+  // ---- Modification 9D: dynamic Confidence caption ----
+  // Explains WHY the confidence value is what it is, using only state
+  // computeConfidence(c) already reads (its own result + engagementTier).
+  // Does not touch computeConfidence, CONFIDENCE_THRESHOLDS, or the
+  // combined-score/high-risk logic in any way.
+  function confidenceCaption(c){
+    const conf = computeConfidence(c);
+    const tier = engagementTier(c);
+    if (conf.label === 'Low' && tier === 'highrisk'){
+      const tp = currentTp(c);
+      const attempts = tp ? tp.attempts : 3;
+      return `${attempts} no-response attempt${attempts===1?'':'s'} require attention`;
+    }
+    if (conf.label === 'High') return 'Strong progress and positive sentiment';
+    if (conf.label === 'Medium') return 'Progressing, but some attention is needed';
+    return 'Progress and sentiment indicate lower confidence';
+  }
+
   // ---- Modification 9B: Joining Readiness Sentiment score ----
   // Proposed product scoring model for the 4-question joining_readiness
   // check-in (Modification 9A). Weights kept in one object so they're
@@ -2910,7 +2928,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
               <span class="jp-confidence-label" data-tip="Indicates the likelihood of the candidate joining, derived from journey progress and sentiment together.">Confidence</span>
               <span class="jp-confidence-value">${conf.label}</span>
             </div>
-            <div class="jp-confidence-caption">Based on journey progress + sentiment analysis</div>
+            <div class="jp-confidence-caption">${confidenceCaption(c)}</div>
           </div>
         </div>
 

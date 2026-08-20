@@ -4188,7 +4188,7 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
     const marginX = 48;
     const contentW = pageWidth - marginX*2;
     const bottomLimit = pageHeight - 46;
-    const HEADER_TOP = 60; // top y of content area on every page (below header rule)
+    const HEADER_TOP = 74; // top y of content area on every page (below header rule) — gives the 17pt bold title (and, on continuation pages, the first section heading) clear room below the header rule at y=52 instead of colliding with it
     let y = HEADER_TOP;
 
     // ---- palette (mirrors the app's --brand / --ink tokens) ----
@@ -4204,7 +4204,13 @@ body.app-loading .topbar, body.app-loading main.content{display:none;}
       if (y + extra > bottomLimit){ doc.addPage(); y = HEADER_TOP; }
     }
     function sectionHeading(text){
-      ensureSpace(28);
+      ensureSpace(34);
+      // Extra top clearance: several sections above end on a rounded card
+      // whose own trailing gap is a few pt too tight for this heading's
+      // ascender, which let the heading text touch the card's bottom edge.
+      // Adding fixed headroom here (rather than tuning every card's exit
+      // gap individually) guarantees a clean gap before every heading.
+      y += 6;
       doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(...INK);
       doc.text(text, marginX, y);
       y += 7;
